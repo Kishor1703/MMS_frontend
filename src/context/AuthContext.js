@@ -42,8 +42,10 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const hasRole = (...roles) => roles.includes(user?.role);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isOwner: user?.role === "owner" }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, hasRole, isOwner: hasRole("admin", "owner"), isAdmin: hasRole("admin"), isGeneralManager: hasRole("general_manager") }}>
       {children}
     </AuthContext.Provider>
   );

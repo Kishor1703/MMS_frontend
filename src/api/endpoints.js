@@ -46,6 +46,13 @@ export const sparePartApi = {
   remove: (id) => apiClient.delete(`/spare-parts/${id}`),
 };
 
+export const maintenanceJobApi = {
+  list: (params) => apiClient.get("/maintenance-jobs", { params }),
+  create: (data) => apiClient.post("/maintenance-jobs", data),
+  update: (id, data) => apiClient.put(`/maintenance-jobs/${id}`, data),
+  remove: (id) => apiClient.delete(`/maintenance-jobs/${id}`),
+};
+
 export const notificationApi = {
   list: (params) => apiClient.get("/notifications", { params }),
   markRead: (id) => apiClient.patch(`/notifications/${id}/read`),
