@@ -18,7 +18,7 @@ import "./App.css";
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -36,7 +36,7 @@ export default function App() {
             <Route
               path="/machines/new"
               element={
-                <ProtectedRoute allowedRoles={["owner"]}>
+                <ProtectedRoute allowedRoles={["admin", "owner"]}>
                   <AddMachine />
                 </ProtectedRoute>
               }
@@ -44,7 +44,7 @@ export default function App() {
             <Route
               path="/employees"
               element={
-                <ProtectedRoute allowedRoles={["owner"]}>
+                <ProtectedRoute allowedRoles={["admin", "owner", "general_manager"]}>
                   <Employees />
                 </ProtectedRoute>
               }
@@ -53,7 +53,7 @@ export default function App() {
             <Route
               path="/reports"
               element={
-                <ProtectedRoute allowedRoles={["owner"]}>
+                <ProtectedRoute allowedRoles={["admin", "owner", "general_manager"]}>
                   <Reports />
                 </ProtectedRoute>
               }
