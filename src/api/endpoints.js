@@ -2,6 +2,9 @@ import apiClient from "./client";
 
 export const authApi = {
   login: (data) => apiClient.post("/auth/login", data),
+  register: (data) => apiClient.post("/auth/register", data),
+  listUsers: (role) => apiClient.get("/auth/users", { params: { role } }),
+  removeUser: (id) => apiClient.delete(`/auth/users/${id}`),
   me: () => apiClient.get("/auth/me"),
   changePassword: (data) => apiClient.put("/auth/change-password", data),
   forgotPassword: (data) => apiClient.post("/auth/forgot-password", data),

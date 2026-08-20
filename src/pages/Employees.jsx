@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { employeeApi } from "../api/endpoints";
+import { employeeApi, machineApi } from "../api/endpoints";
 
 const empty = {
   employeeId: "",
@@ -9,19 +9,33 @@ const empty = {
   department: "",
   designation: "",
   password: "",
+  assignedMachines: [],
 };
 
 export default function Employees() {
   const [employees, setEmployees] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [form, setForm] = useState(empty);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
 
   const load = () => employeeApi.list().then((res) => setEmployees(res.data.data));
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    machineApi.list({ limit: 500 }).then((res) => setMachines(res.data.data));
+  }, []);
 
   const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+
+  const toggleMachine = (machineId) => {
+    setForm((current) => ({
+      ...current,
+      assignedMachines: current.assignedMachines.includes(machineId)
+        ? current.assignedMachines.filter((id) => id !== machineId)
+        : [...current.assignedMachines, machineId],
+    }));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -66,6 +80,26 @@ export default function Employees() {
           <input value={form.department} onChange={handleChange("department")} />
           <label>Designation</label>
           <input value={form.designation} onChange={handleChange("designation")} />
+          <label>Assign Machines</label>
+          <details className="machine-checkbox-dropdown">
+            <summary>
+              {form.assignedMachines.length
+                ? `${form.assignedMachines.length} machine${form.assignedMachines.length === 1 ? "" : "s"} selected`
+                : "Select machines"}
+            </summary>
+            <div className="machine-checkbox-options">
+              {machines.length ? machines.map((machine) => (
+                <label key={machine._id} className="machine-checkbox-option">
+                  <input
+                    type="checkbox"
+                    checked={form.assignedMachines.includes(machine._id)}
+                    onChange={() => toggleMachine(machine._id)}
+                  />
+                  <span>{machine.machineName} ({machine.machineNumber})</span>
+                </label>
+              )) : <span className="muted">No machines available</span>}
+            </div>
+          </details>
           <label>Login Password (optional - creates their login)</label>
           <input type="password" value={form.password} onChange={handleChange("password")} />
           <button type="submit">Save Employee</button>

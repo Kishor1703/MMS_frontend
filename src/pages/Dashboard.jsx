@@ -3,7 +3,7 @@ import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
-  const { user, isOwner } = useAuth();
+  const { user, isAdmin, isOwner } = useAuth();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
 
@@ -17,7 +17,9 @@ export default function Dashboard() {
   if (error) return <div className="error-banner">{error}</div>;
   if (!stats) return <div>Loading dashboard...</div>;
 
-  const cards = isOwner
+  const cards = isAdmin
+    ? [{ label: "Company Owners", value: stats.totalOwners }]
+    : isOwner
     ? [
         { label: "Total Machines", value: stats.totalMachines },
         { label: "Running", value: stats.runningMachines },
@@ -45,7 +47,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {isOwner && stats.recentActivity?.length > 0 && (
+      {!isAdmin && isOwner && stats.recentActivity?.length > 0 && (
         <div className="activity-panel">
           <h2>Recent Activity</h2>
           <ul>

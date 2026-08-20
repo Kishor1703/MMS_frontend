@@ -10,6 +10,7 @@ import MachineList from "./pages/MachineList";
 import MachineDetail from "./pages/MachineDetail";
 import AddMachine from "./pages/AddMachine";
 import Employees from "./pages/Employees";
+import AccountManagement from "./pages/AccountManagement";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
 
@@ -42,9 +43,25 @@ export default function App() {
               }
             />
             <Route
+              path="/owners"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AccountManagement role="owner" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/general-managers"
+              element={
+                <ProtectedRoute allowedRoles={["owner"]}>
+                  <AccountManagement role="general_manager" />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/employees"
               element={
-                <ProtectedRoute allowedRoles={["admin", "owner", "general_manager"]}>
+                <ProtectedRoute allowedRoles={["general_manager"]}>
                   <Employees />
                 </ProtectedRoute>
               }

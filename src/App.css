@@ -350,6 +350,41 @@
   cursor: pointer;
 }
 
+.machine-checkbox-dropdown {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.machine-checkbox-dropdown summary {
+  padding: 8px;
+  cursor: pointer;
+  color: #374151;
+}
+
+.machine-checkbox-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 10px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.machine-checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.machine-checkbox-option input {
+  width: auto;
+  margin: 0;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
