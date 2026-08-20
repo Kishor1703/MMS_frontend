@@ -37,7 +37,7 @@ export default function App() {
             <Route
               path="/machines/new"
               element={
-                <ProtectedRoute allowedRoles={["admin", "owner"]}>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <AddMachine />
                 </ProtectedRoute>
               }

@@ -11,7 +11,7 @@ const statusColors = {
 };
 
 export default function MachineList() {
-  const { isOwner } = useAuth();
+  const { isAdmin, isOwner } = useAuth();
   const [machines, setMachines] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -34,8 +34,8 @@ export default function MachineList() {
   return (
     <div>
       <div className="page-header">
-        <h1>{isOwner ? "Machines" : "My Assigned Machines"}</h1>
-        {isOwner && (
+        <h1>{isAdmin || isOwner ? "Machines" : "My Assigned Machines"}</h1>
+        {isAdmin && (
           <Link to="/machines/new" className="btn-primary">
             + Add Machine
           </Link>

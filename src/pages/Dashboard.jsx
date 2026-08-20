@@ -18,7 +18,14 @@ export default function Dashboard() {
   if (!stats) return <div>Loading dashboard...</div>;
 
   const cards = isAdmin
-    ? [{ label: "Company Owners", value: stats.totalOwners }]
+    ? [
+        { label: "Company Owners", value: stats.totalOwners },
+        { label: "Total Machines", value: stats.totalMachines },
+        { label: "Running", value: stats.runningMachines },
+        { label: "Under Maintenance", value: stats.underMaintenanceMachines },
+        { label: "Breakdown", value: stats.breakdownMachines },
+        { label: "Idle", value: stats.idleMachines },
+      ]
     : isOwner
     ? [
         { label: "Total Machines", value: stats.totalMachines },

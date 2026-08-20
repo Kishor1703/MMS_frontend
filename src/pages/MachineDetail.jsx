@@ -130,6 +130,8 @@ const emptyJob = () => ({
   downtimeStart:       "",
   downtimeEnd:         "",
   engineerStarted:     "",
+  engineerName:        "",
+  engineerPhone:       "",
   workDone:            "",
   engineerFinished:    "",
   sparesUsed:          [{ spareName: "", spareNumber: "", quantity: 1, price: 0 }],
@@ -190,6 +192,9 @@ function SparePartsTab({ machineId, legacySpares }) {
       if (!form.downtimeStart)     return "Please set the downtime start date/time.";
     }
     if (step === 1) {
+      if (!form.engineerStarted) return "Please set when the engineer started.";
+      if (!form.engineerName.trim()) return "Please enter the engineer's name.";
+      if (!form.engineerPhone.trim()) return "Please enter the engineer's phone number.";
       if (!form.workDone.trim()) return "Please describe the work done.";
     }
     if (step === 2) {
@@ -311,6 +316,8 @@ function SparePartsTab({ machineId, legacySpares }) {
                     <TimelineRow num="2" label="Downtime Start"   value={fmt(job.downtimeStart)} />
                     <TimelineRow num="3" label="Downtime End"     value={fmt(job.downtimeEnd)} />
                     <TimelineRow num="4" label="Engineer Started" value={fmt(job.engineerStarted)} />
+                    <TimelineRow num="4a" label="Engineer Name" value={job.engineerName || "Not recorded"} />
+                    <TimelineRow num="4b" label="Engineer Phone" value={job.engineerPhone || "Not recorded"} />
                     <TimelineRow num="5" label="Work Done"        value={job.workDone || "—"} />
                     <TimelineRow num="6" label="Engineer Finished" value={fmt(job.engineerFinished)} />
                     <TimelineRow
@@ -440,7 +447,7 @@ function SparePartsTab({ machineId, legacySpares }) {
               <div className="mj-fields">
                 <div className="mj-row">
                   <div className="mj-col">
-                    <label className="mj-label">Engineer Started</label>
+                    <label className="mj-label">Engineer Started <span className="req">*</span></label>
                     <input
                       type="datetime-local"
                       className="mj-input"
@@ -448,6 +455,32 @@ function SparePartsTab({ machineId, legacySpares }) {
                       onChange={(e) => setForm({ ...form, engineerStarted: e.target.value })}
                     />
                   </div>
+                </div>
+
+                <div className="mj-row">
+                  <div className="mj-col">
+                    <label className="mj-label">Engineer Name <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      className="mj-input"
+                      placeholder="Enter engineer name"
+                      value={form.engineerName}
+                      onChange={(e) => setForm({ ...form, engineerName: e.target.value })}
+                    />
+                  </div>
+                  <div className="mj-col">
+                    <label className="mj-label">Engineer Phone Number <span className="req">*</span></label>
+                    <input
+                      type="tel"
+                      className="mj-input"
+                      placeholder="Enter phone number"
+                      value={form.engineerPhone}
+                      onChange={(e) => setForm({ ...form, engineerPhone: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="mj-row">
                   <div className="mj-col">
                     <label className="mj-label">Engineer Finished</label>
                     <input

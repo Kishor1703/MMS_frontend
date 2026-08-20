@@ -11,6 +11,7 @@ const ownerLinks = [
 
 const adminLinks = [
   { to: "/dashboard", label: "Dashboard" },
+  { to: "/machines", label: "Machines" },
   { to: "/owners", label: "Company Owners" },
   { to: "/notifications", label: "Notifications" },
 ];
