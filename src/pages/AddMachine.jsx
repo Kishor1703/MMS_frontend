@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { machineApi } from "../api/endpoints";
 
@@ -20,6 +20,14 @@ export default function AddMachine() {
   const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [companies, setCompanies] = useState([]);
+
+  useEffect(() => {
+    machineApi
+      .companies()
+      .then((res) => setCompanies(res.data.data))
+      .catch(() => setError("Failed to load companies"));
+  }, []);
 
   const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
@@ -55,7 +63,12 @@ export default function AddMachine() {
         <input value={form.machineType} onChange={handleChange("machineType")} />
 
         <label>Company</label>
-        <input value={form.company} onChange={handleChange("company")} />
+        <select value={form.company} onChange={handleChange("company")} required>
+          <option value="">Select company</option>
+          {companies.map((company) => (
+            <option key={company} value={company}>{company}</option>
+          ))}
+        </select>
 
         <label>Model Number</label>
         <input value={form.modelNumber} onChange={handleChange("modelNumber")} />

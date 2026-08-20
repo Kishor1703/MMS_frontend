@@ -12,6 +12,7 @@ export const authApi = {
 
 export const machineApi = {
   list: (params) => apiClient.get("/machines", { params }),
+  companies: () => apiClient.get("/machines/companies"),
   getById: (id) => apiClient.get(`/machines/${id}`),
   create: (data) => apiClient.post("/machines", data),
   update: (id, data) => apiClient.put(`/machines/${id}`, data),
