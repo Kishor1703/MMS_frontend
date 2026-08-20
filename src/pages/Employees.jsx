@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { employeeApi, machineApi } from "../api/endpoints";
+import { employeeApi, machineApi, uploadApi } from "../api/endpoints";
 
 const empty = {
   employeeId: "",
@@ -18,6 +18,8 @@ export default function Employees() {
   const [form, setForm] = useState(empty);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const load = () => employeeApi.list().then((res) => setEmployees(res.data.data));
 
@@ -40,13 +42,22 @@ export default function Employees() {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!profilePhoto) {
+      setError("Please upload a profile photo.");
+      return;
+    }
+    setSaving(true);
     try {
-      await employeeApi.create(form);
+      const upload = await uploadApi.single(profilePhoto);
+      await employeeApi.create({ ...form, profilePhoto: upload.data.data.url });
       setForm(empty);
+      setProfilePhoto(null);
       setShowForm(false);
       load();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add employee");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -80,6 +91,14 @@ export default function Employees() {
           <input value={form.department} onChange={handleChange("department")} />
           <label>Designation</label>
           <input value={form.designation} onChange={handleChange("designation")} />
+          <label>Profile Photo</label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/gif"
+            onChange={(e) => setProfilePhoto(e.target.files?.[0] || null)}
+            required
+          />
+          {profilePhoto && <p className="muted">Selected: {profilePhoto.name}</p>}
           <label>Assign Machines</label>
           <details className="machine-checkbox-dropdown">
             <summary>
@@ -102,7 +121,7 @@ export default function Employees() {
           </details>
           <label>Login Password (optional - creates their login)</label>
           <input type="password" value={form.password} onChange={handleChange("password")} />
-          <button type="submit">Save Employee</button>
+          <button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Employee"}</button>
         </form>
       )}
 

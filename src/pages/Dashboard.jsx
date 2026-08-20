@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { dashboardApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
+import apiClient from "../api/client";
+
+const profilePhotoUrl = (photo) => (photo ? new URL(photo, apiClient.defaults.baseURL).href : "");
 
 export default function Dashboard() {
   const { user, isAdmin, isOwner } = useAuth();
@@ -42,9 +45,22 @@ export default function Dashboard() {
         { label: "Oil Change Due", value: stats.oilChangeDue },
       ];
 
+  const isEmployee = user?.role === "employee";
+
   return (
     <div>
       <h1>Welcome, {user?.name}</h1>
+      {isEmployee && (
+        <section className="employee-profile-card">
+          {user?.profilePhoto && (
+            <img className="employee-profile-photo" src={profilePhotoUrl(user.profilePhoto)} alt={`${user.name}'s profile`} />
+          )}
+          <div>
+            <h2>{user.name}</h2>
+            <p className="employee-role">Employee</p>
+          </div>
+        </section>
+      )}
       <div className="stat-grid">
         {cards.map((card) => (
           <div className="stat-card" key={card.label}>

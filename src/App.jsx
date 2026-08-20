@@ -13,6 +13,7 @@ import Employees from "./pages/Employees";
 import AccountManagement from "./pages/AccountManagement";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
+import Profile from "./pages/Profile";
 
 import "./App.css";
 
@@ -32,6 +33,7 @@ export default function App() {
             }
           >
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/machines" element={<MachineList />} />
             <Route path="/machines/:id" element={<MachineDetail />} />
             <Route
