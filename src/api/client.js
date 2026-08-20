@@ -13,7 +13,10 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // A rejected login is not an expired authenticated session. Let the login
+    // form display the API's validation message instead of forcing a reload.
+    const isLoginRequest = error.config?.url?.endsWith("/auth/login");
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
