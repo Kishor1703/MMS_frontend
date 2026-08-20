@@ -19,7 +19,7 @@ export default function Navbar() {
 
   return (
     <header className="navbar">
-      <div className="navbar-title">Machine Maintenance Management System</div>
+      <div className="navbar-title">Textile Mill Maintenance</div>
       <div className="navbar-right">
         <div className="notification-bell">
           🔔 {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
