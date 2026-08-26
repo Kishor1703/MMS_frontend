@@ -21,7 +21,9 @@ export default function Employees() {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const load = () => employeeApi.list().then((res) => setEmployees(res.data.data));
+  // The API paginates at 20 records by default. Request the full GM team so
+  // employees do not silently disappear from the management screen.
+  const load = () => employeeApi.list({ limit: 500 }).then((res) => setEmployees(res.data.data));
 
   useEffect(() => {
     load();

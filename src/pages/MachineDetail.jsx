@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { machineApi, oilChangeApi, maintenanceApi, maintenanceJobApi, uploadApi } from "../api/endpoints";
+import { useAuth } from "../context/AuthContext";
 
 const TABS = ["Info", "Maintenance History", "Oil Change History", "Spare Parts", "Documents"];
 
@@ -16,9 +17,11 @@ const getStatusClass = (status) => {
 
 export default function MachineDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [activeTab, setActiveTab] = useState("Info");
   const [error, setError] = useState("");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const loadData = () => {
     machineApi
@@ -33,16 +36,53 @@ export default function MachineDetail() {
   if (!data)  return <div>Loading...</div>;
 
   const { machine, maintenanceHistory, oilChangeHistory, spareHistory, upcomingMaintenance } = data;
+  // Documents are part of the employee/GM reporting workflow, not an
+  // admin/owner machine-management feature.
+  const visibleTabs = TABS.filter(
+    (tab) => tab !== "Documents" || ["employee", "general_manager"].includes(user?.role)
+  );
+
+  const updateMachineStatus = async (status) => {
+    setUpdatingStatus(true);
+    setError("");
+    try {
+      const response = await machineApi.updateStatus(id, status);
+      setData((current) => ({
+        ...current,
+        machine: { ...current.machine, status: response.data.data.status },
+      }));
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update machine status");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   return (
     <div>
       <div className="page-header">
         <h1>{machine.machineName}</h1>
-        <span className={`status-badge ${getStatusClass(machine.status)}`}>{machine.status}</span>
+        <div>
+          <span className={`status-badge ${getStatusClass(machine.status)}`}>{machine.status}</span>
+          {user?.role === "employee" && (
+            <select
+              aria-label="Machine status"
+              value={machine.status}
+              disabled={updatingStatus}
+              onChange={(event) => updateMachineStatus(event.target.value)}
+              style={{ marginLeft: "12px" }}
+            >
+              <option>Running</option>
+              <option>Under Maintenance</option>
+              <option>Breakdown</option>
+              <option>Idle</option>
+            </select>
+          )}
+        </div>
       </div>
 
       <div className="tabs">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab}
             className={activeTab === tab ? "tab active" : "tab"}
@@ -86,7 +126,7 @@ export default function MachineDetail() {
       )}
 
       {activeTab === "Spare Parts" && (
-        <SparePartsTab machineId={id} legacySpares={spareHistory} />
+        <SparePartsTab machineId={id} legacySpares={spareHistory} userRole={user?.role} />
       )}
 
       {activeTab === "Documents" && (
@@ -132,7 +172,7 @@ const emptyJob = () => ({
   sparesUsed:          [],
 });
 
-function SparePartsTab({ machineId, legacySpares }) {
+function SparePartsTab({ machineId, legacySpares, userRole }) {
   const [jobs, setJobs]           = useState([]);
   const [loading, setLoading]     = useState(true);
   const [showForm, setShowForm]   = useState(false);
@@ -141,6 +181,10 @@ function SparePartsTab({ machineId, legacySpares }) {
   const [saving, setSaving]       = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [formError, setFormError] = useState("");
+  const [editingJobId, setEditingJobId] = useState(null);
+
+  const canSubmitReport = userRole === "employee";
+  const canEditReports = userRole === "general_manager";
 
   const fetchJobs = () => {
     maintenanceJobApi
@@ -152,13 +196,21 @@ function SparePartsTab({ machineId, legacySpares }) {
 
   useEffect(() => { fetchJobs(); }, [machineId]);
 
-  const openForm = () => {
-    setForm(emptyJob());
+  const openForm = (job = null) => {
+    setForm(job ? {
+      whyStopped: job.whyStopped || "",
+      sparesRequired: job.sparesUsed?.length ? "yes" : "no",
+      sparesUsed: (job.sparesUsed || []).map((spare) => ({ ...spare, photo: null })),
+    } : emptyJob());
+    setEditingJobId(job?._id || null);
     setStep(0);
     setFormError("");
     setShowForm(true);
   };
-  const closeForm = () => setShowForm(false);
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingJobId(null);
+  };
 
   // Spare rows helpers
   const addSpare = () =>
@@ -216,20 +268,15 @@ function SparePartsTab({ machineId, legacySpares }) {
         whyStopped: form.whyStopped,
         sparesUsed,
       };
-      await maintenanceJobApi.create(payload);
-      setShowForm(false);
+      if (editingJobId) await maintenanceJobApi.update(editingJobId, payload);
+      else await maintenanceJobApi.create(payload);
+      closeForm();
       fetchJobs();
     } catch (e) {
       setFormError(e.response?.data?.message || "Failed to save job.");
     } finally {
       setSaving(false);
     }
-  };
-
-  const deleteJob = async (jobId) => {
-    if (!window.confirm("Delete this maintenance job?")) return;
-    await maintenanceJobApi.remove(jobId);
-    fetchJobs();
   };
 
   const photoUrl = (photo) => (photo ? new URL(photo, import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").href : "");
@@ -242,7 +289,7 @@ function SparePartsTab({ machineId, legacySpares }) {
           <h2 className="sp-title">Maintenance Job Log</h2>
           <p className="sp-subtitle">Record why the machine stopped, any spares used, and the next maintenance date.</p>
         </div>
-        <button className="btn-primary" onClick={openForm}>+ Log New Job</button>
+        {canSubmitReport && <button className="btn-primary" onClick={() => openForm()}>+ Submit Report</button>}
       </div>
 
       {/* Flow legend */}
@@ -262,7 +309,7 @@ function SparePartsTab({ machineId, legacySpares }) {
         <div className="sp-empty">
           <span className="sp-empty-icon">🔩</span>
           <p>No maintenance jobs logged yet.</p>
-          <button className="btn-primary" onClick={openForm}>Log First Job</button>
+          {canSubmitReport && <button className="btn-primary" onClick={() => openForm()}>Submit First Report</button>}
         </div>
       )}
 
@@ -328,9 +375,11 @@ function SparePartsTab({ machineId, legacySpares }) {
                     </div>
                   )}
 
-                  <div className="job-actions">
-                    <button className="btn-danger-sm" onClick={() => deleteJob(job._id)}>🗑 Delete</button>
-                  </div>
+                  {canEditReports && (
+                    <div className="job-actions">
+                      <button className="btn-primary" onClick={() => openForm(job)}>Edit Report</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -367,7 +416,9 @@ function SparePartsTab({ machineId, legacySpares }) {
               ))}
             </div>
 
-            <h3 className="mj-modal-title">{SIMPLE_FLOW_STEPS[step]}</h3>
+            <h3 className="mj-modal-title">
+              {editingJobId ? `Edit Report — ${SIMPLE_FLOW_STEPS[step]}` : SIMPLE_FLOW_STEPS[step]}
+            </h3>
 
             {/* Why Stopped */}
             {step === 0 && (
@@ -465,7 +516,7 @@ function SparePartsTab({ machineId, legacySpares }) {
                 <button className="btn-primary" onClick={nextStep}>Next →</button>
               ) : (
                 <button className="btn-primary" onClick={submit} disabled={saving}>
-                  {saving ? "Saving…" : "✓ Submit Job"}
+                  {saving ? "Saving…" : editingJobId ? "Save Report" : "✓ Submit Report"}
                 </button>
               )}
             </div>
@@ -510,7 +561,7 @@ function MaintenanceTab({ machineId, records, onSaved }) {
       <form className="inline-form" onSubmit={submit}>
         <select value={form.maintenanceType} onChange={(e) => setForm({ ...form, maintenanceType: e.target.value })}>
           <option>Preventive</option>
-          <option>Corrective</option>
+          <option>Idle</option>
           <option>Breakdown</option>
           <option>Inspection</option>
           <option>Other</option>
@@ -526,7 +577,7 @@ function MaintenanceTab({ machineId, records, onSaved }) {
       <div className="record-list">
         {records.map((r) => (
           <div className="record-row" key={r._id}>
-            <strong>{r.maintenanceType}</strong> —{" "}
+            <strong>{r.maintenanceType === "Corrective" ? "Idle" : r.maintenanceType}</strong> —{" "}
             {new Date(r.maintenanceDate).toLocaleDateString()} — {r.description}
           </div>
         ))}

@@ -12,6 +12,7 @@ const statusColors = {
 
 export default function MachineList() {
   const { isAdmin, isOwner } = useAuth();
+  const canOpenMachine = !isAdmin && !isOwner;
   const [machines, setMachines] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState("");
@@ -97,16 +98,28 @@ export default function MachineList() {
             <div>Loading...</div>
           ) : (
             <div className="card-grid">
-              {machines.map((m) => (
-                <Link to={`/machines/${m._id}`} key={m._id} className="machine-card machine-card-main">
-                  <div className="machine-card-header">
-                    <h3>{m.machineName}</h3>
-                    <span className={`status-badge ${statusColors[m.status]}`}>{m.status}</span>
+              {machines.map((m) => {
+                const card = (
+                  <>
+                    <div className="machine-card-header">
+                      <h3>{m.machineName}</h3>
+                      <span className={`status-badge ${statusColors[m.status]}`}>{m.status}</span>
+                    </div>
+                    <p>{m.machineNumber}</p>
+                    <p className="muted">{m.machineType}</p>
+                  </>
+                );
+
+                return canOpenMachine ? (
+                  <Link to={`/machines/${m._id}`} key={m._id} className="machine-card machine-card-main">
+                    {card}
+                  </Link>
+                ) : (
+                  <div key={m._id} className="machine-card machine-card-main" aria-disabled="true">
+                    {card}
                   </div>
-                  <p>{m.machineNumber}</p>
-                  <p className="muted">{m.machineType}</p>
-                </Link>
-              ))}
+                );
+              })}
               {machines.length === 0 && <p>No machines found.</p>}
             </div>
           )}

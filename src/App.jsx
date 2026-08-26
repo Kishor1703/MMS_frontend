@@ -35,7 +35,14 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/machines" element={<MachineList />} />
-            <Route path="/machines/:id" element={<MachineDetail />} />
+            <Route
+              path="/machines/:id"
+              element={
+                <ProtectedRoute allowedRoles={["general_manager", "employee"]}>
+                  <MachineDetail />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/machines/new"
               element={
@@ -72,7 +79,7 @@ export default function App() {
             <Route
               path="/reports"
               element={
-                <ProtectedRoute allowedRoles={["admin", "owner", "general_manager"]}>
+                <ProtectedRoute allowedRoles={["employee"]}>
                   <Reports />
                 </ProtectedRoute>
               }

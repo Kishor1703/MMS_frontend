@@ -6,7 +6,6 @@ const ownerLinks = [
   { to: "/machines", label: "Machines" },
   { to: "/general-managers", label: "General Managers" },
   { to: "/notifications", label: "Notifications" },
-  { to: "/reports", label: "Reports" },
 ];
 
 const adminLinks = [
@@ -28,6 +27,7 @@ const employeeLinks = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/machines", label: "My Machines" },
   { to: "/notifications", label: "Notifications" },
+  { to: "/reports", label: "Reports" },
 ];
 
 export default function Sidebar() {
