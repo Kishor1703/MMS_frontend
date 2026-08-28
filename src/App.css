@@ -359,6 +359,36 @@
   gap: 16px;
 }
 
+.machine-layout-list {
+  display: grid;
+  grid-template-columns: repeat(var(--layout-columns), minmax(150px, 1fr));
+  gap: 14px;
+  overflow-x: auto;
+  padding: 8px 2px 4px;
+}
+
+.machine-layout-slot {
+  min-width: 150px;
+}
+
+.machine-layout-slot-number {
+  margin-bottom: 6px;
+  color: var(--indigo);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.machine-layout-empty {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--border-warm);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .machine-card {
   background: var(--card);
   border-radius: 10px;
@@ -576,6 +606,42 @@
   color: var(--muted-warm);
   font-size: 12px;
   font-weight: 400;
+}
+
+.layout-lock-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--border-warm-soft);
+  border: 1px solid var(--border-warm);
+  margin: 16px 0 8px;
+  color: var(--charcoal);
+  font-size: 13px;
+}
+
+.layout-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.layout-actions .btn-secondary {
+  padding: 10px 16px;
+}
+
+.layout-password-modal {
+  max-width: 440px;
+  padding: 28px 30px 24px;
+}
+
+.layout-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .orientation-key { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted-warm); font-size: 12px; }

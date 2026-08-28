@@ -7,15 +7,19 @@ export const authApi = {
   removeUser: (id) => apiClient.delete(`/auth/users/${id}`),
   me: () => apiClient.get("/auth/me"),
   changePassword: (data) => apiClient.put("/auth/change-password", data),
+  verifyPassword: (data) => apiClient.post("/auth/verify-password", data),
   forgotPassword: (data) => apiClient.post("/auth/forgot-password", data),
 };
 
 export const machineApi = {
   list: (params) => apiClient.get("/machines", { params }),
   companies: () => apiClient.get("/machines/companies"),
+  companyLayout: (company) => apiClient.get("/machines/company-layout", { params: { company } }),
+  saveCompanyLayout: (data) => apiClient.put("/machines/company-layout", data),
   getById: (id) => apiClient.get(`/machines/${id}`),
   create: (data) => apiClient.post("/machines", data),
   update: (id, data) => apiClient.put(`/machines/${id}`, data),
+  updateLayout: (id, data) => apiClient.patch(`/machines/${id}/layout`, data),
   updateStatus: (id, status) => apiClient.patch(`/machines/${id}/status`, { status }),
   remove: (id) => apiClient.delete(`/machines/${id}`),
   assign: (id, employeeIds) => apiClient.post(`/machines/${id}/assign`, { employeeIds }),

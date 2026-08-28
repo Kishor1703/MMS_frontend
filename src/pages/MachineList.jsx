@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { machineApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 
@@ -10,6 +10,12 @@ const statusColors = {
   Idle: "gray",
 };
 
+const getLayoutMachineNumber = (row, column, width) => {
+  const rowBand = Math.floor((row - 1) / 2);
+  const rowInBand = (row - 1) % 2;
+  return rowBand * width * 2 + (width - column) * 2 + rowInBand + 1;
+};
+
 export default function MachineList() {
   const { isAdmin, isOwner } = useAuth();
   const canOpenMachine = !isAdmin && !isOwner;
@@ -17,9 +23,19 @@ export default function MachineList() {
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
-  const [company, setCompany] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const company = searchParams.get("company") || "";
   const [loading, setLoading] = useState(false);
   const [loadingCompanies, setLoadingCompanies] = useState(isAdmin);
+  const [companyLayout, setCompanyLayout] = useState(null);
+
+  const selectCompany = (companyName) => {
+    setSearchParams({ company: companyName });
+  };
+
+  const clearCompany = () => {
+    setSearchParams({});
+  };
 
   const loadMachines = () => {
     setLoading(true);
@@ -45,12 +61,48 @@ export default function MachineList() {
       .finally(() => setLoadingCompanies(false));
   }, [isAdmin]);
 
+  useEffect(() => {
+    if (!company) {
+      setCompanyLayout(null);
+      return undefined;
+    }
+
+    machineApi
+      .companyLayout(company)
+      .then((res) => setCompanyLayout(res.data.data))
+      .catch(() => setCompanyLayout(null));
+    return undefined;
+  }, [company]);
+
+  const renderMachineCard = (machine) => {
+    const card = (
+      <>
+        <div className="machine-card-header">
+          <h3>{machine.machineName}</h3>
+          <span className={`status-badge ${statusColors[machine.status]}`}>{machine.status}</span>
+        </div>
+        <p>{machine.machineNumber}</p>
+        <p className="muted">{machine.machineType}</p>
+      </>
+    );
+
+    return canOpenMachine ? (
+      <Link to={`/machines/${machine._id}`} className="machine-card machine-card-main">
+        {card}
+      </Link>
+    ) : (
+      <div className="machine-card machine-card-main" aria-disabled="true">
+        {card}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="page-header">
         <h1>{isAdmin || isOwner ? "Machines" : "My Assigned Machines"}</h1>
-        {isAdmin && (
-          <Link to="/machines/new" className="btn-primary">
+        {isAdmin && company && (
+          <Link to={`/machines/new?company=${encodeURIComponent(company)}`} className="btn-primary">
             + Add Machine
           </Link>
         )}
@@ -64,7 +116,7 @@ export default function MachineList() {
                 type="button"
                 key={companyName}
                 className="company-card"
-                onClick={() => setCompany(companyName)}
+                onClick={() => selectCompany(companyName)}
               >
                 {companyName}
               </button>
@@ -88,7 +140,7 @@ export default function MachineList() {
               <option value="Idle">Idle</option>
             </select>
             {isAdmin && (
-              <button type="button" className="company-filter" onClick={() => setCompany("")}>
+              <button type="button" className="company-filter" onClick={clearCompany}>
                 Back to Companies
               </button>
             )}
@@ -96,30 +148,37 @@ export default function MachineList() {
 
           {loading ? (
             <div>Loading...</div>
-          ) : (
-            <div className="card-grid">
-              {machines.map((m) => {
-                const card = (
-                  <>
-                    <div className="machine-card-header">
-                      <h3>{m.machineName}</h3>
-                      <span className={`status-badge ${statusColors[m.status]}`}>{m.status}</span>
-                    </div>
-                    <p>{m.machineNumber}</p>
-                    <p className="muted">{m.machineType}</p>
-                  </>
-                );
+          ) : company && (companyLayout || machines[0]?.layout) ? (
+            <div
+              className="machine-layout-list"
+              style={{
+                "--layout-columns": companyLayout?.width || machines[0]?.layout?.width || 2,
+              }}
+            >
+              {Array.from({
+                length:
+                  (companyLayout?.width || machines[0]?.layout?.width || 2) *
+                  (companyLayout?.length || machines[0]?.layout?.length || 2),
+              }).map((_, index) => {
+                const width = companyLayout?.width || machines[0]?.layout?.width || 2;
+                const row = Math.floor(index / width) + 1;
+                const column = (index % width) + 1;
+                const machineNumber = String(getLayoutMachineNumber(row, column, width));
+                const machine = machines.find((item) => String(item.machineNumber) === machineNumber);
 
-                return canOpenMachine ? (
-                  <Link to={`/machines/${m._id}`} key={m._id} className="machine-card machine-card-main">
-                    {card}
-                  </Link>
-                ) : (
-                  <div key={m._id} className="machine-card machine-card-main" aria-disabled="true">
-                    {card}
+                return (
+                  <div className="machine-layout-slot" key={machineNumber}>
+                    <div className="machine-layout-slot-number">Machine {machineNumber}</div>
+                    {machine ? renderMachineCard(machine) : <div className="machine-layout-empty">Empty position</div>}
                   </div>
                 );
               })}
+            </div>
+          ) : (
+            <div className="card-grid">
+              {machines.map((machine) => (
+                <div key={machine._id}>{renderMachineCard(machine)}</div>
+              ))}
               {machines.length === 0 && <p>No machines found.</p>}
             </div>
           )}
