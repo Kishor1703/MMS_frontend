@@ -26,8 +26,10 @@ export default function MachineList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const company = searchParams.get("company") || "";
   const [loading, setLoading] = useState(false);
-  const [loadingCompanies, setLoadingCompanies] = useState(isAdmin);
-  const [companyLayout, setCompanyLayout] = useState(null);
+  const [companiesLoaded, setCompaniesLoaded] = useState(false);
+  const [companyLayoutData, setCompanyLayoutData] = useState(null);
+  const companyLayout = company ? companyLayoutData : null;
+  const loadingCompanies = isAdmin && !companiesLoaded;
 
   const selectCompany = (companyName) => {
     setSearchParams({ company: companyName });
@@ -54,23 +56,21 @@ export default function MachineList() {
 
   useEffect(() => {
     if (!isAdmin) return undefined;
-    setLoadingCompanies(true);
     machineApi
       .companies()
       .then((res) => setCompanies(res.data.data))
-      .finally(() => setLoadingCompanies(false));
+      .finally(() => {
+        setCompaniesLoaded(true);
+      });
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!company) {
-      setCompanyLayout(null);
-      return undefined;
-    }
+    if (!company) return undefined;
 
     machineApi
       .companyLayout(company)
-      .then((res) => setCompanyLayout(res.data.data))
-      .catch(() => setCompanyLayout(null));
+      .then((res) => setCompanyLayoutData(res.data.data))
+      .catch(() => setCompanyLayoutData(null));
     return undefined;
   }, [company]);
 
@@ -149,21 +149,27 @@ export default function MachineList() {
           {loading ? (
             <div>Loading...</div>
           ) : company && (companyLayout || machines[0]?.layout) ? (
+            (() => {
+              const layoutWidth = companyLayout?.width || machines[0]?.layout?.width || 2;
+              const layoutLength = companyLayout?.length || machines[0]?.layout?.length || 2;
+              const layoutMachineCount =
+                companyLayout?.machineCount ||
+                machines[0]?.layout?.machineCount ||
+                layoutWidth * layoutLength;
+
+              return (
             <div
               className="machine-layout-list"
               style={{
-                "--layout-columns": companyLayout?.width || machines[0]?.layout?.width || 2,
+                "--layout-columns": layoutWidth,
               }}
             >
               {Array.from({
-                length:
-                  (companyLayout?.width || machines[0]?.layout?.width || 2) *
-                  (companyLayout?.length || machines[0]?.layout?.length || 2),
+                length: layoutMachineCount,
               }).map((_, index) => {
-                const width = companyLayout?.width || machines[0]?.layout?.width || 2;
-                const row = Math.floor(index / width) + 1;
-                const column = (index % width) + 1;
-                const machineNumber = String(getLayoutMachineNumber(row, column, width));
+                const row = Math.floor(index / layoutWidth) + 1;
+                const column = (index % layoutWidth) + 1;
+                const machineNumber = String(getLayoutMachineNumber(row, column, layoutWidth));
                 const machine = machines.find((item) => String(item.machineNumber) === machineNumber);
 
                 return (
@@ -174,6 +180,8 @@ export default function MachineList() {
                 );
               })}
             </div>
+              );
+            })()
           ) : (
             <div className="card-grid">
               {machines.map((machine) => (

@@ -583,7 +583,7 @@
 
 .layout-length-input {
   display: grid;
-  grid-template-columns: auto 72px;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 6px 10px;
   margin: 4px 0 14px;
@@ -592,13 +592,42 @@
   font-weight: 600;
 }
 
+.layout-stepper {
+  display: grid;
+  grid-template-columns: 34px minmax(72px, 96px) 34px;
+  gap: 6px;
+  align-items: center;
+  justify-content: start;
+}
+
+.layout-stepper-btn,
 .layout-length-input input {
-  width: 72px;
   padding: 7px 8px;
   border: 1px solid var(--border-warm);
   border-radius: 6px;
   color: var(--charcoal);
   font: inherit;
+}
+
+.layout-stepper-btn {
+  background: var(--cotton);
+  cursor: pointer;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.layout-stepper-btn:hover:not(:disabled) {
+  background: var(--border-warm-soft);
+}
+
+.layout-stepper-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.layout-length-input input {
+  width: 100%;
 }
 
 .layout-length-input small {

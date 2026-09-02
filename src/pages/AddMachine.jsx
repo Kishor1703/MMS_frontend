@@ -16,32 +16,45 @@ const empty = {
 };
 
 const layoutOptions = [[2, 3, 4, 5], [6, 7, 8], [9, 10]];
+const DEFAULT_LAYOUT_SIZE = 2;
+const DEFAULT_LAYOUT_MACHINE_COUNT = DEFAULT_LAYOUT_SIZE * DEFAULT_LAYOUT_SIZE;
+
+const getLayoutMachineCount = (layout) => {
+  const width = Number(layout?.width) || DEFAULT_LAYOUT_SIZE;
+  const length = Number(layout?.length) || DEFAULT_LAYOUT_SIZE;
+  const machineCount = Number(layout?.machineCount);
+
+  return Number.isInteger(machineCount) && machineCount > 0 ? machineCount : width * length;
+};
 
 export default function AddMachine() {
   const [searchParams] = useSearchParams();
   const company = searchParams.get("company") || "";
-  const [form, setForm] = useState({ ...empty, company });
+  const [form, setForm] = useState({ ...empty });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [usedMachineNumbers, setUsedMachineNumbers] = useState([]);
   const [savedMachine, setSavedMachine] = useState(null);
   const [layoutSaved, setLayoutSaved] = useState(false);
   const [layoutSize, setLayoutSize] = useState(2);
-  const [layoutLength, setLayoutLength] = useState(2);
+  const [layoutMachineCount, setLayoutMachineCount] = useState(DEFAULT_LAYOUT_MACHINE_COUNT);
   const [layoutUnlocked, setLayoutUnlocked] = useState(false);
   const [layoutPassword, setLayoutPassword] = useState("");
   const [layoutPasswordError, setLayoutPasswordError] = useState("");
   const [layoutSaving, setLayoutSaving] = useState(false);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
 
-  useEffect(() => {
-    setForm((current) => ({ ...current, company }));
-  }, [company]);
-
   const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  const resetLayoutAccess = () => {
+    setLayoutUnlocked(false);
+    setLayoutPassword("");
+    setLayoutPasswordError("");
+    setShowPasswordPrompt(false);
+  };
 
-  const length = Number(layoutLength) || 1;
-  const layoutCells = Array.from({ length: layoutSize * length }, (_, index) => {
+  const machineCount = Math.max(1, Number(layoutMachineCount) || 1);
+  const layoutLength = Math.max(1, Math.ceil(machineCount / layoutSize));
+  const layoutCells = Array.from({ length: machineCount }, (_, index) => {
     const row = Math.floor(index / layoutSize) + 1;
     const column = (index % layoutSize) + 1;
     const rowBand = Math.floor((row - 1) / 2);
@@ -61,12 +74,12 @@ export default function AddMachine() {
   const canEditLayout = !layoutSaved || layoutUnlocked;
 
   useEffect(() => {
-    if (savedMachine || !form.company) return;
+    if (savedMachine || !company) return;
 
     let active = true;
     Promise.all([
-      machineApi.companyLayout(form.company),
-      machineApi.list({ company: form.company, limit: 1000 }),
+      machineApi.companyLayout(company),
+      machineApi.list({ company, limit: 1000 }),
     ])
       .then(([layoutRes, machinesRes]) => {
         if (!active) return;
@@ -78,7 +91,7 @@ export default function AddMachine() {
         );
         if (layout) {
           setLayoutSize(layout.width);
-          setLayoutLength(layout.length);
+          setLayoutMachineCount(getLayoutMachineCount(layout));
           setLayoutSaved(true);
         } else {
           setLayoutSaved(false);
@@ -92,14 +105,7 @@ export default function AddMachine() {
     return () => {
       active = false;
     };
-  }, [form.company, savedMachine]);
-
-  const resetLayoutAccess = () => {
-    setLayoutUnlocked(false);
-    setLayoutPassword("");
-    setLayoutPasswordError("");
-    setShowPasswordPrompt(false);
-  };
+  }, [company, savedMachine]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -111,15 +117,17 @@ export default function AddMachine() {
     try {
       const res = await machineApi.create({
         ...form,
+        company,
         layoutWidth: layoutSize,
-        layoutLength: length,
+        layoutLength,
+        machineCount,
       });
 
       const machine = res.data.data;
       setSavedMachine(machine);
       setLayoutSaved(true);
       setLayoutSize(machine.layout?.width || layoutSize);
-      setLayoutLength(machine.layout?.length || length);
+      setLayoutMachineCount(getLayoutMachineCount(machine.layout));
       resetLayoutAccess();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create machine");
@@ -151,7 +159,7 @@ export default function AddMachine() {
   };
 
   const saveLayout = async () => {
-    if (!form.company) {
+    if (!company) {
       setError("Select a company before saving the layout");
       return;
     }
@@ -161,16 +169,18 @@ export default function AddMachine() {
 
     try {
       await machineApi.saveCompanyLayout({
-        company: form.company,
+        company,
         layoutWidth: layoutSize,
-        layoutLength: length,
+        layoutLength,
+        machineCount,
         adminPassword: layoutPassword || undefined,
       });
 
       if (savedMachine) {
         const res = await machineApi.updateLayout(savedMachine._id, {
           layoutWidth: layoutSize,
-          layoutLength: length,
+          layoutLength,
+          machineCount,
           adminPassword: layoutPassword,
         });
         setSavedMachine(res.data.data);
@@ -185,11 +195,11 @@ export default function AddMachine() {
   };
 
   const startAnotherMachine = () => {
-    setForm({ ...empty, company });
+    setForm({ ...empty });
     setSavedMachine(null);
     setLayoutSaved(false);
-    setLayoutSize(2);
-    setLayoutLength(2);
+    setLayoutSize(DEFAULT_LAYOUT_SIZE);
+    setLayoutMachineCount(DEFAULT_LAYOUT_MACHINE_COUNT);
     resetLayoutAccess();
     setError("");
   };
@@ -221,7 +231,7 @@ export default function AddMachine() {
           <input value={form.machineType} onChange={handleChange("machineType")} />
 
           <label>Company</label>
-          <input value={form.company} readOnly required placeholder="Select a company first" />
+          <input value={company} readOnly required placeholder="Select a company first" />
 
           <label>Model Number</label>
           <input value={form.modelNumber} onChange={handleChange("modelNumber")} />
@@ -259,7 +269,9 @@ export default function AddMachine() {
               <h2 id="machine-layout-title">Machine Layout</h2>
               <p>Choose a layout to preview the machine positions.</p>
             </div>
-            <span className="layout-size-badge">{layoutSize} x {length}</span>
+            <span className="layout-size-badge">
+              {layoutSize} x {layoutLength} | {machineCount} slots
+            </span>
           </div>
 
           {layoutSaved && (
@@ -288,7 +300,7 @@ export default function AddMachine() {
                     onClick={() => {
                       if (!canEditLayout) return;
                       setLayoutSize(size);
-                      setLayoutLength(size);
+                      setLayoutMachineCount(size * size);
                     }}
                     aria-pressed={layoutSize === size}
                     disabled={!canEditLayout}
@@ -301,20 +313,46 @@ export default function AddMachine() {
           </div>
 
           <label className="layout-length-input">
-            <span>Length (North -&gt; South)</span>
-            <input
-              type="number"
-              min="1"
-              max="50"
-              value={layoutLength}
-              onChange={(event) => {
-                if (!canEditLayout) return;
-                const value = event.target.value;
-                setLayoutLength(value === "" ? "" : Math.min(50, Math.max(1, Number(value))));
-              }}
-              disabled={!canEditLayout}
-            />
-            <small>Enter the number of rows. Width stays at {layoutSize} columns.</small>
+            <span>Machine slots</span>
+            <div className="layout-stepper">
+              <button
+                type="button"
+                className="layout-stepper-btn"
+                onClick={() => {
+                  if (!canEditLayout) return;
+                  setLayoutMachineCount((current) => Math.max(1, Number(current) - 1));
+                }}
+                disabled={!canEditLayout || machineCount <= 1}
+                aria-label="Remove one machine slot"
+              >
+                -
+              </button>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                value={machineCount}
+                onChange={(event) => {
+                  if (!canEditLayout) return;
+                  const value = event.target.value;
+                  setLayoutMachineCount(value === "" ? "" : Math.min(50, Math.max(1, Number(value))));
+                }}
+                disabled={!canEditLayout}
+              />
+              <button
+                type="button"
+                className="layout-stepper-btn"
+                onClick={() => {
+                  if (!canEditLayout) return;
+                  setLayoutMachineCount((current) => Math.min(50, Number(current) + 1));
+                }}
+                disabled={!canEditLayout || machineCount >= 50}
+                aria-label="Add one machine slot"
+              >
+                +
+              </button>
+            </div>
+            <small>Add one machine at a time. Width stays at {layoutSize} columns.</small>
           </label>
 
           <div className="orientation-key" aria-label="Layout orientation">
@@ -332,7 +370,7 @@ export default function AddMachine() {
                 <div
                   className="machine-grid"
                   style={{ "--layout-size": layoutSize }}
-                  aria-label={`${layoutSize} columns by ${length} rows machine grid. North is at the top and West is on the left.`}
+                  aria-label={`${layoutSize} columns and ${layoutLength} rows, with ${machineCount} machine slots. North is at the top and West is on the left.`}
                 >
                   {layoutCells.map(({ row, column, machineNumber }) => (
                     <div className="machine-layout-cell" key={`${row}-${column}`}>
@@ -362,7 +400,7 @@ export default function AddMachine() {
                 Cancel Editing
               </button>
             )}
-            </div>
+          </div>
         </section>
       </div>
 
