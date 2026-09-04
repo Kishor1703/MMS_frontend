@@ -22,6 +22,8 @@ export default function AddMachine() {
   const company = searchParams.get("company") || "";
   const [form, setForm] = useState({ ...empty, company });
   const [error, setError] = useState("");
+  const [companies, setCompanies] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [saving, setSaving] = useState(false);
   const [usedMachineNumbers, setUsedMachineNumbers] = useState([]);
   const [savedMachine, setSavedMachine] = useState(null);
@@ -36,6 +38,32 @@ export default function AddMachine() {
 
   useEffect(() => {
     setForm((current) => ({ ...current, company }));
+  }, [company]);
+
+  useEffect(() => {
+    let active = true;
+
+    machineApi
+      .companies()
+      .then((res) => {
+        if (!active) return;
+        const companyNames = res.data.data || [];
+        setCompanies(
+          company && !companyNames.includes(company)
+            ? [company, ...companyNames]
+            : companyNames
+        );
+      })
+      .catch(() => {
+        if (active) setError("Failed to load companies");
+      })
+      .finally(() => {
+        if (active) setLoadingCompanies(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [company]);
 
   const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
@@ -221,7 +249,19 @@ export default function AddMachine() {
           <input value={form.machineType} onChange={handleChange("machineType")} />
 
           <label>Company</label>
-          <input value={form.company} readOnly required placeholder="Select a company first" />
+          <select
+            value={form.company}
+            onChange={handleChange("company")}
+            required
+            disabled={loadingCompanies || isSaved}
+          >
+            <option value="">{loadingCompanies ? "Loading companies..." : "Select a company"}</option>
+            {companies.map((companyName) => (
+              <option key={companyName} value={companyName}>
+                {companyName}
+              </option>
+            ))}
+          </select>
 
           <label>Model Number</label>
           <input value={form.modelNumber} onChange={handleChange("modelNumber")} />
