@@ -17,6 +17,7 @@ export default function Employees() {
   const [machines, setMachines] = useState([]);
   const [form, setForm] = useState(empty);
   const [showForm, setShowForm] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
   const [error, setError] = useState("");
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -32,6 +33,31 @@ export default function Employees() {
 
   const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
+  const openCreateForm = () => {
+    setEditingEmployee(null);
+    setForm(empty);
+    setProfilePhoto(null);
+    setError("");
+    setShowForm(true);
+  };
+
+  const openEditForm = (employee) => {
+    setEditingEmployee(employee);
+    setForm({
+      employeeId: employee.employeeId || "",
+      name: employee.name || "",
+      phoneNumber: employee.phoneNumber || "",
+      email: employee.email || "",
+      department: employee.department || "",
+      designation: employee.designation || "",
+      password: "",
+      assignedMachines: employee.assignedMachines?.map((machine) => machine._id || machine) || [],
+    });
+    setProfilePhoto(null);
+    setError("");
+    setShowForm(true);
+  };
+
   const toggleMachine = (machineId) => {
     setForm((current) => ({
       ...current,
@@ -44,20 +70,31 @@ export default function Employees() {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!profilePhoto) {
+    if (!editingEmployee && !profilePhoto) {
       setError("Please upload a profile photo.");
       return;
     }
     setSaving(true);
     try {
-      const upload = await uploadApi.single(profilePhoto);
-      await employeeApi.create({ ...form, profilePhoto: upload.data.data.url });
+      let profilePhotoUrl = editingEmployee?.profilePhoto;
+      if (profilePhoto) {
+        const upload = await uploadApi.single(profilePhoto);
+        profilePhotoUrl = upload.data.data.url;
+      }
+      const payload = { ...form, profilePhoto: profilePhotoUrl };
+      if (!payload.password) delete payload.password;
+      if (editingEmployee) {
+        await employeeApi.update(editingEmployee._id, payload);
+      } else {
+        await employeeApi.create(payload);
+      }
       setForm(empty);
       setProfilePhoto(null);
+      setEditingEmployee(null);
       setShowForm(false);
       load();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to add employee");
+      setError(err.response?.data?.message || `Failed to ${editingEmployee ? "update" : "add"} employee`);
     } finally {
       setSaving(false);
     }
@@ -73,7 +110,17 @@ export default function Employees() {
     <div>
       <div className="page-header">
         <h1>Employees</h1>
-        <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+        <button
+          className="btn-primary"
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+              setEditingEmployee(null);
+            } else {
+              openCreateForm();
+            }
+          }}
+        >
           {showForm ? "Cancel" : "+ Add Employee"}
         </button>
       </div>
@@ -93,13 +140,14 @@ export default function Employees() {
           <input value={form.department} onChange={handleChange("department")} />
           <label>Designation</label>
           <input value={form.designation} onChange={handleChange("designation")} />
-          <label>Profile Photo</label>
+          <label>Profile Photo {editingEmployee && "(optional)"}</label>
           <input
             type="file"
             accept="image/jpeg,image/png,image/gif"
             onChange={(e) => setProfilePhoto(e.target.files?.[0] || null)}
-            required
+            required={!editingEmployee}
           />
+          {editingEmployee?.profilePhoto && !profilePhoto && <p className="muted">Current profile photo will be kept.</p>}
           {profilePhoto && <p className="muted">Selected: {profilePhoto.name}</p>}
           <label>Assign Machines</label>
           <details className="machine-checkbox-dropdown">
@@ -121,9 +169,9 @@ export default function Employees() {
               )) : <span className="muted">No machines available</span>}
             </div>
           </details>
-          <label>Login Password (optional - creates their login)</label>
+          <label>{editingEmployee ? "New Login Password (optional)" : "Login Password (optional - creates their login)"}</label>
           <input type="password" value={form.password} onChange={handleChange("password")} />
-          <button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Employee"}</button>
+          <button type="submit" disabled={saving}>{saving ? "Saving..." : editingEmployee ? "Update Employee" : "Save Employee"}</button>
         </form>
       )}
 
@@ -147,6 +195,7 @@ export default function Employees() {
               <td>{emp.department}</td>
               <td>{emp.assignedMachines?.length || 0}</td>
               <td>
+                <button className="btn-secondary-sm" onClick={() => openEditForm(emp)}>Edit</button>{" "}
                 <button onClick={() => remove(emp._id)}>Deactivate</button>
               </td>
             </tr>
