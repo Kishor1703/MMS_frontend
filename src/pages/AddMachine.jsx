@@ -36,6 +36,8 @@ export default function AddMachine() {
   const companyParam = searchParams.get("company") || "";
   const [form, setForm] = useState({ ...empty, assetType: "Machine" });
   const [error, setError] = useState("");
+  const [companies, setCompanies] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [saving, setSaving] = useState(false);
   const [usedMachineNumbers, setUsedMachineNumbers] = useState([]);
   const [layoutSaved, setLayoutSaved] = useState(false);
