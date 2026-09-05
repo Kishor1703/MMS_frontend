@@ -4,34 +4,47 @@ import { useAuth } from "../context/AuthContext";
 const ownerLinks = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/machines", label: "Machines" },
+  { to: "/compressors", label: "Compressors" },
+  { to: "/air-dryers", label: "Air Dryers" },
   { to: "/general-managers", label: "General Managers" },
+  { to: "/reports", label: "Reports" },
+  { to: "/leaves", label: "Leaves" },
   { to: "/notifications", label: "Notifications" },
 ];
 
 const adminLinks = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/machines", label: "Machines" },
+  { to: "/compressors", label: "Compressors" },
+  { to: "/air-dryers", label: "Air Dryers" },
   { to: "/owners", label: "Company Owners" },
+  { to: "/reports", label: "Reports" },
   { to: "/notifications", label: "Notifications" },
 ];
 
 const generalManagerLinks = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/machines", label: "Machines" },
+  { to: "/compressors", label: "Compressors" },
+  { to: "/air-dryers", label: "Air Dryers" },
   { to: "/employees", label: "Employees" },
   { to: "/notifications", label: "Notifications" },
   { to: "/reports", label: "Reports" },
+  { to: "/leaves", label: "Leaves" },
 ];
 
 const employeeLinks = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/machines", label: "My Machines" },
+  { to: "/compressors", label: "My Compressors" },
+  { to: "/air-dryers", label: "My Air Dryers" },
   { to: "/notifications", label: "Notifications" },
   { to: "/reports", label: "Reports" },
+  { to: "/leaves", label: "Leaves" },
 ];
 
 export default function Sidebar() {
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const links = hasRole("admin")
     ? adminLinks
     : hasRole("owner")

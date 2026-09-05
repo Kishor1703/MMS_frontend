@@ -67,6 +67,35 @@ export default function Employees() {
     }));
   };
 
+  const renderAssignmentGroup = (label, equipment, emptyLabel) => (
+    <>
+      <label>Assign {label}</label>
+      <details className="machine-checkbox-dropdown">
+        <summary>
+          {equipment.filter((item) => form.assignedMachines.includes(item._id)).length
+            ? `${equipment.filter((item) => form.assignedMachines.includes(item._id)).length} ${label.toLowerCase()} selected`
+            : `Select ${label.toLowerCase()}`}
+        </summary>
+        <div className="machine-checkbox-options">
+          {equipment.length ? equipment.map((item) => (
+            <label key={item._id} className="machine-checkbox-option">
+              <input
+                type="checkbox"
+                checked={form.assignedMachines.includes(item._id)}
+                onChange={() => toggleMachine(item._id)}
+              />
+              <span>{item.machineName} ({item.machineId || item.machineNumber})</span>
+            </label>
+          )) : <span className="muted">{emptyLabel}</span>}
+        </div>
+      </details>
+    </>
+  );
+
+  const regularMachines = machines.filter((machine) => !machine.assetType || machine.assetType === "Machine");
+  const compressors = machines.filter((machine) => machine.assetType === "Compressor");
+  const airDryers = machines.filter((machine) => machine.assetType === "Air Dryer");
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
@@ -149,26 +178,9 @@ export default function Employees() {
           />
           {editingEmployee?.profilePhoto && !profilePhoto && <p className="muted">Current profile photo will be kept.</p>}
           {profilePhoto && <p className="muted">Selected: {profilePhoto.name}</p>}
-          <label>Assign Machines</label>
-          <details className="machine-checkbox-dropdown">
-            <summary>
-              {form.assignedMachines.length
-                ? `${form.assignedMachines.length} machine${form.assignedMachines.length === 1 ? "" : "s"} selected`
-                : "Select machines"}
-            </summary>
-            <div className="machine-checkbox-options">
-              {machines.length ? machines.map((machine) => (
-                <label key={machine._id} className="machine-checkbox-option">
-                  <input
-                    type="checkbox"
-                    checked={form.assignedMachines.includes(machine._id)}
-                    onChange={() => toggleMachine(machine._id)}
-                  />
-                  <span>{machine.machineName} ({machine.machineNumber})</span>
-                </label>
-              )) : <span className="muted">No machines available</span>}
-            </div>
-          </details>
+          {renderAssignmentGroup("Machines", regularMachines, "No machines available")}
+          {renderAssignmentGroup("Compressors", compressors, "No compressors available")}
+          {renderAssignmentGroup("Air Dryers", airDryers, "No air dryers available")}
           <label>{editingEmployee ? "New Login Password (optional)" : "Login Password (optional - creates their login)"}</label>
           <input type="password" value={form.password} onChange={handleChange("password")} />
           <button type="submit" disabled={saving}>{saving ? "Saving..." : editingEmployee ? "Update Employee" : "Save Employee"}</button>

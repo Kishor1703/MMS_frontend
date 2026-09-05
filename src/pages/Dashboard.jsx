@@ -20,10 +20,14 @@ export default function Dashboard() {
   if (error) return <div className="error-banner">{error}</div>;
   if (!stats) return <div>Loading dashboard...</div>;
 
+  const isEmployee = user?.role === "employee";
+
   const cards = isAdmin
     ? [
         { label: "Company Owners", value: stats.totalOwners },
         { label: "Total Machines", value: stats.totalMachines },
+        { label: "Compressors", value: stats.totalCompressors },
+        { label: "Air Dryers", value: stats.totalAirDryers },
         { label: "Running", value: stats.runningMachines },
         { label: "Under Maintenance", value: stats.underMaintenanceMachines },
         { label: "Breakdown", value: stats.breakdownMachines },
@@ -32,6 +36,8 @@ export default function Dashboard() {
     : isOwner
     ? [
         { label: "Total Machines", value: stats.totalMachines },
+        { label: "Compressors", value: stats.totalCompressors },
+        { label: "Air Dryers", value: stats.totalAirDryers },
         { label: "Running", value: stats.runningMachines },
         { label: "Under Maintenance", value: stats.underMaintenanceMachines },
         { label: "Breakdown", value: stats.breakdownMachines },
@@ -41,11 +47,12 @@ export default function Dashboard() {
         { label: "Oil Change Due", value: stats.oilChangeDue },
       ]
     : [
+        { label: isEmployee ? "My Machines" : "Machines", value: stats.totalMachines },
+        { label: "Compressors", value: stats.totalCompressors },
+        { label: "Air Dryers", value: stats.totalAirDryers },
         { label: "Maintenance Due", value: stats.maintenanceDue },
         { label: "Oil Change Due", value: stats.oilChangeDue },
       ];
-
-  const isEmployee = user?.role === "employee";
 
   return (
     <div>
@@ -69,6 +76,28 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {stats.maintenanceSchedule?.length > 0 && (
+        <section className="activity-panel maintenance-schedule-panel">
+          <h2>Upcoming Maintenance</h2>
+          <div className="schedule-list">
+            {stats.maintenanceSchedule.map((item) => (
+              <div className="schedule-row" key={item._id}>
+                <div>
+                  <strong>{item.machine?.machineName || "Machine"} ({item.machine?.machineNumber || "-"})</strong>
+                  <div className="muted">{item.category} | {item.component}</div>
+                </div>
+                <div>
+                  <span className={`status-badge ${item.scheduleStatus === "Overdue" ? "red" : item.scheduleStatus === "Due Soon" ? "orange" : "green"}`}>
+                    {item.scheduleStatus}
+                  </span>
+                  <div className="muted">{new Date(item.nextMaintenanceDate).toLocaleDateString()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {!isAdmin && isOwner && stats.recentActivity?.length > 0 && (
         <div className="activity-panel">

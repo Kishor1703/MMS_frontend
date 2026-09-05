@@ -14,7 +14,16 @@ export default function AccountManagement({ role }) {
 
   const load = () => authApi.listUsers(role).then((res) => setAccounts(res.data.data));
 
-  useEffect(() => { load(); }, [role]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const res = await authApi.listUsers(role);
+      if (active) setAccounts(res.data.data);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [role]);
 
   const change = (field) => (event) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));

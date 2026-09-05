@@ -78,4 +78,25 @@ export const uploadApi = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+  multiple: (files) => {
+    const formData = new FormData();
+    Array.from(files).forEach((file) => formData.append("files", file));
+    return apiClient.post("/upload/multiple", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+};
+
+export const leaveApi = {
+  list: () => apiClient.get("/leaves"),
+  create: (data) => apiClient.post("/leaves", data),
+  update: (id, data) => apiClient.put(`/leaves/${id}`, data),
+  remove: (id) => apiClient.delete(`/leaves/${id}`),
+};
+
+export const reportApi = {
+  list: () => apiClient.get("/reports"),
+  createMonthly: (data) => apiClient.post("/reports", data),
+  download: (id) => apiClient.get(`/reports/${id}/download`, { responseType: "blob" }),
+  remove: (id) => apiClient.delete(`/reports/${id}`),
 };

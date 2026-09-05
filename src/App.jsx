@@ -9,10 +9,13 @@ import Dashboard from "./pages/Dashboard";
 import MachineList from "./pages/MachineList";
 import MachineDetail from "./pages/MachineDetail";
 import AddMachine from "./pages/AddMachine";
+import EquipmentList from "./pages/EquipmentList";
+import AddEquipment from "./pages/AddEquipment";
 import Employees from "./pages/Employees";
 import AccountManagement from "./pages/AccountManagement";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
+import LeaveManagement from "./pages/LeaveManagement";
 import Profile from "./pages/Profile";
 
 import "./App.css";
@@ -35,10 +38,12 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/machines" element={<MachineList />} />
+            <Route path="/compressors" element={<EquipmentList assetType="Compressor" />} />
+            <Route path="/air-dryers" element={<EquipmentList assetType="Air Dryer" />} />
             <Route
               path="/machines/:id"
               element={
-                <ProtectedRoute allowedRoles={["general_manager", "employee"]}>
+                <ProtectedRoute allowedRoles={["employee"]}>
                   <MachineDetail />
                 </ProtectedRoute>
               }
@@ -50,6 +55,30 @@ export default function App() {
                   <AddMachine />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/machines/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "owner"]}>
+                  <AddMachine />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/compressors/new"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Compressor" /></ProtectedRoute>}
+            />
+            <Route
+              path="/compressors/:id/edit"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Compressor" /></ProtectedRoute>}
+            />
+            <Route
+              path="/air-dryers/new"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Air Dryer" /></ProtectedRoute>}
+            />
+            <Route
+              path="/air-dryers/:id/edit"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Air Dryer" /></ProtectedRoute>}
             />
             <Route
               path="/owners"
@@ -79,8 +108,16 @@ export default function App() {
             <Route
               path="/reports"
               element={
-                <ProtectedRoute allowedRoles={["employee"]}>
+                <ProtectedRoute allowedRoles={["admin", "owner", "general_manager", "employee"]}>
                   <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "general_manager", "employee"]}>
+                  <LeaveManagement />
                 </ProtectedRoute>
               }
             />

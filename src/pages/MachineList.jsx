@@ -17,15 +17,18 @@ const getLayoutMachineNumber = (row, column, width) => {
 };
 
 export default function MachineList() {
-  const { isAdmin, isOwner } = useAuth();
-  const canOpenMachine = !isAdmin && !isOwner;
+  const { hasRole, isAdmin, isOwner } = useAuth();
+  const canOpenMachine = hasRole("employee");
+  const canEditMachine = isAdmin || isOwner;
   const [machines, setMachines] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const company = searchParams.get("company") || "";
+  const assetType = "Machine";
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [companiesLoaded, setCompaniesLoaded] = useState(false);
   const [companyLayoutData, setCompanyLayoutData] = useState(null);
   const companyLayout = company ? companyLayoutData : null;
@@ -39,10 +42,24 @@ export default function MachineList() {
     setSearchParams({});
   };
 
+  const deleteMachine = async (machine) => {
+    if (!window.confirm(`Delete ${machine.machineName} (${machine.machineNumber})?`)) return;
+
+    setDeletingId(machine._id);
+    try {
+      await machineApi.remove(machine._id);
+      loadMachines();
+    } catch (err) {
+      window.alert(err.response?.data?.message || "Failed to delete machine");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const loadMachines = () => {
     setLoading(true);
     machineApi
-      .list({ search, status, company })
+      .list({ search, status, company, assetType })
       .then((res) => setMachines(res.data.data))
       .finally(() => setLoading(false));
   };
@@ -52,7 +69,7 @@ export default function MachineList() {
     const timeout = setTimeout(loadMachines, 300);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, search, status, company]);
+  }, [isAdmin, search, status, company, assetType]);
 
   useEffect(() => {
     if (!isAdmin) return undefined;
@@ -86,14 +103,33 @@ export default function MachineList() {
       </>
     );
 
-    return canOpenMachine ? (
-      <Link to={`/machines/${machine._id}`} className="machine-card machine-card-main">
-        {card}
-      </Link>
-    ) : (
-      <div className="machine-card machine-card-main" aria-disabled="true">
-        {card}
-      </div>
+    return (
+      <>
+        {canOpenMachine ? (
+          <Link to={`/machines/${machine._id}`} className="machine-card machine-card-main">
+            {card}
+          </Link>
+        ) : (
+          <div className="machine-card machine-card-main" aria-disabled="true">
+            {card}
+          </div>
+        )}
+        {canEditMachine && (
+          <Link className="btn-secondary machine-edit-link" to={`/machines/${machine._id}/edit`}>
+            Edit machine
+          </Link>
+        )}
+        {isAdmin && (
+          <button
+            type="button"
+            className="btn-secondary machine-delete-link"
+            onClick={() => deleteMachine(machine)}
+            disabled={deletingId === machine._id}
+          >
+            {deletingId === machine._id ? "Deleting..." : "Delete machine"}
+          </button>
+        )}
+      </>
     );
   };
 
@@ -102,9 +138,7 @@ export default function MachineList() {
       <div className="page-header">
         <h1>{isAdmin || isOwner ? "Machines" : "My Assigned Machines"}</h1>
         {isAdmin && company && (
-          <Link to={`/machines/new?company=${encodeURIComponent(company)}`} className="btn-primary">
-            + Add Machine
-          </Link>
+          <Link to={`/machines/new?company=${encodeURIComponent(company)}`} className="btn-primary">+ Add Machine</Link>
         )}
       </div>
 

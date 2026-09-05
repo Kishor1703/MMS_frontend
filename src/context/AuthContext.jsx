@@ -8,12 +8,11 @@ export function AuthProvider({ children }) {
     const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem("token")));
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      setLoading(false);
       return;
     }
     authApi
@@ -51,4 +50,5 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
