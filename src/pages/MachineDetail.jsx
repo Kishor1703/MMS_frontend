@@ -2,12 +2,24 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { machineApi, oilChangeApi, maintenanceApi, maintenanceJobApi, uploadApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
+import CompressorMaintenanceTab from "../components/CompressorMaintenanceTab";
+import AirDryerMaintenanceTab from "../components/AirDryerMaintenanceTab";
+import { categoryLabel, orNa } from "../constants/machineCategories";
 
-const TABS = ["Info", "Maintenance History", "Oil Change History", "Spare Parts", "Documents"];
+const TABS = [
+  "Info",
+  "Maintenance History",
+  "Oil Change History",
+  "Spare Parts",
+  "Compressor Maintenance",
+  "Air Dryer Maintenance",
+  "Documents",
+];
 
 const getStatusClass = (status) => {
   switch (status) {
     case "Running":        return "green";
+    case "Stopped":        return "blue";
     case "Under Maintenance": return "orange";
     case "Breakdown":     return "red";
     case "Idle":          return "gray";
@@ -35,7 +47,7 @@ export default function MachineDetail() {
   if (error) return <div className="error-banner">{error}</div>;
   if (!data)  return <div>Loading...</div>;
 
-  const { machine, maintenanceHistory, oilChangeHistory, spareHistory, upcomingMaintenance } = data;
+  const { machine, maintenanceHistory, oilChangeHistory, spareHistory, upcomingMaintenance, costSummary, compressorMaintenance, airDryerMaintenance } = data;
   // Documents are part of the employee/GM reporting workflow, not an
   // admin/owner machine-management feature.
   const visibleTabs = TABS.filter(
@@ -63,8 +75,11 @@ export default function MachineDetail() {
       <div className="page-header">
         <h1>{machine.machineName}</h1>
         <div>
+          <span className={`category-badge ${machine.machineCategory}`}>
+            {categoryLabel(machine.machineCategory)}
+          </span>
           <span className={`status-badge ${getStatusClass(machine.status)}`}>{machine.status}</span>
-          {user?.role === "employee" && (
+          {["admin", "employee"].includes(user?.role) && (
             <select
               aria-label="Machine status"
               value={machine.status}
@@ -73,6 +88,7 @@ export default function MachineDetail() {
               style={{ marginLeft: "12px" }}
             >
               <option>Running</option>
+              <option>Stopped</option>
               <option>Under Maintenance</option>
               <option>Breakdown</option>
               <option>Idle</option>
@@ -96,17 +112,66 @@ export default function MachineDetail() {
       {activeTab === "Info" && (
         <div className="info-grid">
           <div><strong>Machine Number:</strong> {machine.machineNumber}</div>
-          <div><strong>Type:</strong> {machine.machineType}</div>
+          <div><strong>Machine Category:</strong> {categoryLabel(machine.machineCategory)}</div>
+          {machine.machineCategory === "loom" && (
+            <div><strong>Machine Type:</strong> {orNa(machine.machineType)}</div>
+          )}
           <div><strong>Company:</strong> {machine.company}</div>
+          <div><strong>Brand:</strong> {machine.brand || "—"}</div>
           <div><strong>Model:</strong> {machine.modelNumber}</div>
           <div><strong>Serial Number:</strong> {machine.serialNumber}</div>
+          <div><strong>Section:</strong> {machine.section || "—"}</div>
+          <div><strong>Shed:</strong> {machine.shed || "—"}</div>
+          {machine.machineCategory === "loom" && (
+            <>
+              <div><strong>RPM:</strong> {orNa(machine.rpm)}</div>
+              <div><strong>Width:</strong> {machine.width ? `${machine.width} cm` : "—"}</div>
+            </>
+          )}
+
+          {machine.machineCategory === "compressor" && (
+            <>
+              <div><strong>Pressure:</strong> {machine.pressure ? `${machine.pressure} bar` : "—"}</div>
+              <div><strong>Temperature:</strong> {machine.temperature ? `${machine.temperature} °C` : "—"}</div>
+              <div><strong>Oil Level:</strong> {orNa(machine.oilLevel)}</div>
+              <div><strong>Oil Filter Status:</strong> {orNa(machine.oilFilterStatus)}</div>
+              <div><strong>Air Filter Status:</strong> {orNa(machine.airFilterStatus)}</div>
+              <div><strong>Separator Condition:</strong> {orNa(machine.separatorCondition)}</div>
+              <div><strong>Differential Pressure:</strong> {orNa(machine.differentialPressure)}</div>
+              <div><strong>Oil Carryover Status:</strong> {orNa(machine.oilCarryoverStatus)}</div>
+              <div><strong>Separator Element Status:</strong> {orNa(machine.separatorElementStatus)}</div>
+              <div><strong>O-ring / Seal Status:</strong> {orNa(machine.oRingOrSealStatus)}</div>
+              <div><strong>Coolant Level:</strong> {orNa(machine.coolantLevel)}</div>
+            </>
+          )}
+
+          {machine.machineCategory === "air_dryer" && (
+            <>
+              <div><strong>Inlet Pressure:</strong> {machine.inletPressure ? `${machine.inletPressure} bar` : "—"}</div>
+              <div><strong>Outlet Pressure:</strong> {machine.outletPressure ? `${machine.outletPressure} bar` : "—"}</div>
+              <div><strong>Dew Point:</strong> {machine.dewPoint ? `${machine.dewPoint} °C` : "—"}</div>
+              <div><strong>Drain Status:</strong> {orNa(machine.drainStatus)}</div>
+              <div><strong>Filter Condition:</strong> {orNa(machine.filterCondition)}</div>
+              <div><strong>Cleaning Status:</strong> {orNa(machine.cleaningStatus)}</div>
+            </>
+          )}
+          <div><strong>Running Hours:</strong> {machine.runningHours ?? 0}</div>
+          <div><strong>Total Downtime:</strong> {machine.totalDowntime ? `${machine.totalDowntime} min` : "0 min"}</div>
+          <div>
+            <strong>Last Maintenance:</strong>{" "}
+            {machine.lastMaintenanceDate ? new Date(machine.lastMaintenanceDate).toLocaleDateString() : "—"}
+          </div>
+          <div>
+            <strong>Next Maintenance:</strong>{" "}
+            {machine.nextMaintenanceDate ? new Date(machine.nextMaintenanceDate).toLocaleDateString() : "—"}
+          </div>
           <div>
             <strong>Warranty Expiry:</strong>{" "}
             {machine.warrantyExpiry ? new Date(machine.warrantyExpiry).toLocaleDateString() : "-"}
           </div>
           {upcomingMaintenance && (
             <div>
-              <strong>Next Maintenance:</strong>{" "}
+              <strong>Upcoming Scheduled Maintenance:</strong>{" "}
               {new Date(upcomingMaintenance.nextMaintenanceDate).toLocaleDateString()}
             </div>
           )}
@@ -114,30 +179,53 @@ export default function MachineDetail() {
             <strong>Assigned Employees:</strong>{" "}
             {machine.assignedEmployees?.map((e) => e.name).join(", ") || "None"}
           </div>
+          <div><strong>Assigned Engineer:</strong> {machine.assignedEngineer || "—"}</div>
+          <div>
+            <strong>Total Maintenance Jobs:</strong> {costSummary?.totalJobCount ?? 0}
+          </div>
+          <div>
+            <strong>Total Spare Cost:</strong>{" "}
+            <span className="job-cost">${(costSummary?.totalSpareCost ?? 0).toFixed(2)}</span>
+          </div>
+          {machine.notes && <div><strong>Notes:</strong> {machine.notes}</div>}
         </div>
       )}
 
       {activeTab === "Maintenance History" && (
-        <MaintenanceTab machineId={id} records={maintenanceHistory} onSaved={loadData} />
+        <>
+          {((compressorMaintenance?.length || 0) + (airDryerMaintenance?.length || 0)) > 0 && (
+            <div className="summary-strip">
+              {compressorMaintenance?.length > 0 && (
+                <span className="summary-chip">Compressor maintenance logs: {compressorMaintenance.length}</span>
+              )}
+              {airDryerMaintenance?.length > 0 && (
+                <span className="summary-chip">Air dryer maintenance logs: {airDryerMaintenance.length}</span>
+              )}
+              <span className="muted">Details in the Compressor / Air Dryer Maintenance tabs.</span>
+            </div>
+          )}
+          <MaintenanceTab machineId={id} records={maintenanceHistory} onSaved={loadData} userRole={user?.role} />
+        </>
       )}
 
       {activeTab === "Oil Change History" && (
-        <OilChangeTab machineId={id} records={oilChangeHistory} onSaved={loadData} />
+        <OilChangeTab machineId={id} records={oilChangeHistory} onSaved={loadData} userRole={user?.role} />
       )}
 
       {activeTab === "Spare Parts" && (
         <SparePartsTab machineId={id} legacySpares={spareHistory} userRole={user?.role} />
       )}
 
+      {activeTab === "Compressor Maintenance" && (
+        <CompressorMaintenanceTab machineId={id} userRole={user?.role} />
+      )}
+
+      {activeTab === "Air Dryer Maintenance" && (
+        <AirDryerMaintenanceTab machineId={id} userRole={user?.role} />
+      )}
+
       {activeTab === "Documents" && (
-        <div className="record-list">
-          {(machine.documents || []).map((doc, idx) => (
-            <a key={idx} href={doc} target="_blank" rel="noreferrer">
-              Document {idx + 1}
-            </a>
-          ))}
-          {(!machine.documents || machine.documents.length === 0) && <p>No documents uploaded.</p>}
-        </div>
+        <DocumentsTab machineId={id} documents={machine.documents} onSaved={loadData} userRole={user?.role} />
       )}
     </div>
   );
@@ -171,6 +259,8 @@ const emptyJob = () => ({
   sparesRequired:      "",
   sparesUsed:          [],
 });
+
+const emptySpare = () => ({ spareName: "", spareNumber: "", quantity: 1, price: "", photo: null });
 
 function SparePartsTab({ machineId, legacySpares, userRole }) {
   const [jobs, setJobs]           = useState([]);
@@ -214,7 +304,7 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
 
   // Spare rows helpers
   const addSpare = () =>
-    setForm((f) => ({ ...f, sparesUsed: [...f.sparesUsed, { spareName: "", spareNumber: "", quantity: 1, photo: null }] }));
+    setForm((f) => ({ ...f, sparesUsed: [...f.sparesUsed, emptySpare()] }));
   const removeSpare = (i) =>
     setForm((f) => ({ ...f, sparesUsed: f.sparesUsed.filter((_, idx) => idx !== i) }));
   const updateSpare = (i, field, val) =>
@@ -258,8 +348,10 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
     setSaving(true);
     try {
       const sparesUsed = form.sparesRequired === "yes"
-        ? await Promise.all(form.sparesUsed.map(async ({ photo, ...spare }) => ({
+        ? await Promise.all(form.sparesUsed.map(async ({ photo, price, ...spare }) => ({
           ...spare,
+          price: price === "" ? 0 : Number(price) || 0,
+          totalCost: (Number(spare.quantity) || 0) * (price === "" ? 0 : Number(price) || 0),
           photoUrl: photo ? (await uploadApi.single(photo)).data.data.url : "",
         })))
         : [];
@@ -278,6 +370,9 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
       setSaving(false);
     }
   };
+
+  const jobTotal = (job) =>
+    (job.sparesUsed || []).reduce((sum, s) => sum + (Number(s.totalCost) || Number(s.price) * Number(s.quantity) || 0), 0);
 
   const photoUrl = (photo) => (photo ? new URL(photo, import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").href : "");
 
@@ -353,7 +448,14 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
                     <div className="spares-table-wrap">
                       <table className="spares-table">
                         <thead>
-                          <tr><th>Spare Name</th><th>Part #</th><th>Qty</th><th>Photo</th></tr>
+                          <tr>
+                            <th>Spare Name</th>
+                            <th>Part #</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                            <th>Photo</th>
+                          </tr>
                         </thead>
                         <tbody>
                           {job.sparesUsed.map((s, i) => (
@@ -361,6 +463,14 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
                               <td>{s.spareName}</td>
                               <td>{s.spareNumber || "—"}</td>
                               <td>{s.quantity}</td>
+                              <td>{s.price ? `$${s.price}` : "—"}</td>
+                              <td>
+                                {s.totalCost
+                                  ? `$${s.totalCost}`
+                                  : s.price && s.quantity
+                                    ? `$${(Number(s.price) * Number(s.quantity)).toFixed(2)}`
+                                    : "—"}
+                              </td>
                               <td>
                                 {s.photoUrl
                                   ? <a href={photoUrl(s.photoUrl)} target="_blank" rel="noreferrer">
@@ -371,6 +481,14 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
                             </tr>
                           ))}
                         </tbody>
+                        <tfoot>
+                          <tr>
+                            <td colSpan="4" style={{ textAlign: "right" }}><strong>Job Total:</strong></td>
+                            <td colSpan="2" className="job-cost">
+                              <strong>${jobTotal(job).toFixed(2)}</strong>
+                            </td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                   )}
@@ -395,6 +513,9 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
             {legacySpares.map((s) => (
               <div className="record-row" key={s._id}>
                 <strong>{s.spareName}</strong> — Qty {s.quantity} — {new Date(s.replacementDate).toLocaleDateString()} — {s.reason}
+                {s.price ? (
+                  <span className="job-cost"> — ${((Number(s.price) || 0) * (Number(s.quantity) || 1)).toFixed(2)}</span>
+                ) : null}
               </div>
             ))}
           </div>
@@ -488,6 +609,15 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
                       onChange={(e) => updateSpare(i, "quantity", e.target.value)}
                     />
                     <input
+                      className="mj-input spare-price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Price $"
+                      value={s.price}
+                      onChange={(e) => updateSpare(i, "price", e.target.value)}
+                    />
+                    <input
                       className="mj-input"
                       type="file"
                       accept="image/*"
@@ -499,6 +629,12 @@ function SparePartsTab({ machineId, legacySpares, userRole }) {
                     )}
                   </div>
                 ))}
+                <span className="mj-subtotal">
+                  Subtotal: ${form.sparesUsed.reduce(
+                    (sum, s) => sum + (Number(s.quantity) || 0) * (Number(s.price) || 0),
+                    0
+                  ).toFixed(2)}
+                </span>
                 <button className="btn-add-spare" onClick={addSpare}>+ Add Spare Part</button>
               </div>
             )}
@@ -539,46 +675,239 @@ function TimelineRow({ num, label, value, highlight }) {
   );
 }
 
-/* ─── Maintenance History Tab (unchanged) ─── */
-function MaintenanceTab({ machineId, records, onSaved }) {
-  const [form, setForm] = useState({ maintenanceType: "Preventive", description: "" });
-  const [saving, setSaving] = useState(false);
+/* ─── Documents Tab ─── */
+function DocumentsTab({ machineId, documents, onSaved, userRole }) {
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const canManage = ["employee", "general_manager"].includes(userRole);
+  const isImage = (url) => /\.(jpe?g|png|gif|webp)$/i.test(url) || url.includes("image");
+  const isVideo = (url) => /\.(mp4|mov|avi|webm)$/i.test(url) || url.includes("video");
 
   const submit = async (e) => {
     e.preventDefault();
-    setSaving(true);
+    if (files.length === 0) return;
+    setUploading(true);
+    setError("");
     try {
-      await maintenanceApi.create({ ...form, machine: machineId });
-      setForm({ maintenanceType: "Preventive", description: "" });
+      const uploads = await Promise.all(
+        files.map((file) => uploadApi.single(file))
+      );
+      const urls = uploads.map((res) => res.data.data.url);
+      await machineApi.addDocuments(machineId, urls);
+      setFiles([]);
       onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to upload documents");
     } finally {
-      setSaving(false);
+      setUploading(false);
+    }
+  };
+
+  const remove = async (url) => {
+    if (!window.confirm("Remove this document from the machine?")) return;
+    try {
+      await machineApi.removeDocument(machineId, url);
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to remove document");
     }
   };
 
   return (
     <div>
-      <form className="inline-form" onSubmit={submit}>
-        <select value={form.maintenanceType} onChange={(e) => setForm({ ...form, maintenanceType: e.target.value })}>
-          <option>Preventive</option>
-          <option>Idle</option>
-          <option>Breakdown</option>
-          <option>Inspection</option>
-          <option>Other</option>
-        </select>
-        <input
-          placeholder="Description"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-        />
-        <button type="submit" disabled={saving}>Log Maintenance</button>
-      </form>
+      {error && <div className="error-banner">{error}</div>}
+
+      {canManage && (
+        <form className="inline-form" onSubmit={submit}>
+          <input
+            type="file"
+            multiple
+            accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+            onChange={(e) => setFiles(Array.from(e.target.files || []))}
+            aria-label="Choose files to upload"
+          />
+          <button type="submit" disabled={uploading || files.length === 0}>
+            {uploading ? "Uploading..." : `Upload ${files.length ? `(${files.length} files)` : ""}`}
+          </button>
+        </form>
+      )}
+
+      <div className="record-list">
+        {(documents || []).map((doc, idx) => (
+          <div className="record-row doc-row" key={idx}>
+            {isImage(doc) ? (
+              <a href={doc} target="_blank" rel="noreferrer">
+                <img src={doc} alt={`Document ${idx + 1}`} style={{ width: 72, height: 54, objectFit: "cover", borderRadius: 4 }} />
+              </a>
+            ) : isVideo(doc) ? (
+              <a href={doc} target="_blank" rel="noreferrer">
+                <video src={doc} style={{ width: 100, height: 60, objectFit: "cover", borderRadius: 4 }} muted />
+              </a>
+            ) : (
+              <a href={doc} target="_blank" rel="noreferrer">
+                Document {idx + 1}
+              </a>
+            )}
+            {canManage && (
+              <button className="btn-danger-sm" onClick={() => remove(doc)}>Remove</button>
+            )}
+          </div>
+        ))}
+        {(!documents || documents.length === 0) && <p>No documents uploaded.</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Maintenance History Tab (unchanged) ─── */
+function MaintenanceTab({ machineId, records, onSaved, userRole }) {
+  const [form, setForm] = useState({ maintenanceType: "Preventive", description: "", nextMaintenanceDate: "" });
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [error, setError] = useState("");
+
+  const canEdit = ["admin", "general_manager", "employee"].includes(userRole);
+  const canDelete = userRole === "admin";
+  const isReadOnly = userRole === "owner";
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSaving(true);
+    try {
+      await maintenanceApi.create({ ...form, machine: machineId });
+      setForm({ maintenanceType: "Preventive", description: "", nextMaintenanceDate: "" });
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save maintenance record");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEdit = (record) => {
+    setEditingId(record._id);
+    setEditForm({
+      maintenanceType: record.maintenanceType || "Preventive",
+      description: record.description || "",
+      nextMaintenanceDate: record.nextMaintenanceDate
+        ? record.nextMaintenanceDate.split("T")[0]
+        : "",
+      remarks: record.remarks || "",
+      machineRunningHours: record.machineRunningHours || "",
+    });
+    setError("");
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editForm) return;
+    setSaving(true);
+    setError("");
+    try {
+      await maintenanceApi.update(editingId, editForm);
+      setEditingId(null);
+      setEditForm(null);
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update maintenance record");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm("Delete this maintenance record?")) return;
+    try {
+      await maintenanceApi.remove(id);
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete maintenance record");
+    }
+  };
+
+  return (
+    <div>
+      {error && <div className="error-banner">{error}</div>}
+      {!isReadOnly && (
+        <form className="inline-form" onSubmit={submit}>
+          <select value={form.maintenanceType} onChange={(e) => setForm({ ...form, maintenanceType: e.target.value })}>
+            <option>Preventive</option>
+            <option>Idle</option>
+            <option>Breakdown</option>
+            <option>Inspection</option>
+            <option>Other</option>
+          </select>
+          <input
+            placeholder="Description"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+          <input
+            type="date"
+            aria-label="Next maintenance date"
+            value={form.nextMaintenanceDate}
+            onChange={(e) => setForm({ ...form, nextMaintenanceDate: e.target.value })}
+          />
+          <button type="submit" disabled={saving}>Log Maintenance</button>
+        </form>
+      )}
 
       <div className="record-list">
         {records.map((r) => (
-          <div className="record-row" key={r._id}>
-            <strong>{r.maintenanceType === "Corrective" ? "Idle" : r.maintenanceType}</strong> —{" "}
-            {new Date(r.maintenanceDate).toLocaleDateString()} — {r.description}
+          <div className="record-row maintenance-row" key={r._id}>
+            {editingId === r._id && editForm ? (
+              <form className="inline-form edit-inline" onSubmit={saveEdit}>
+                <select
+                  value={editForm.maintenanceType}
+                  onChange={(e) => setEditForm({ ...editForm, maintenanceType: e.target.value })}
+                >
+                  <option>Preventive</option>
+                  <option>Idle</option>
+                  <option>Breakdown</option>
+                  <option>Inspection</option>
+                  <option>Other</option>
+                </select>
+                <input
+                  placeholder="Description"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                />
+                <input
+                  type="date"
+                  aria-label="Next maintenance date"
+                  value={editForm.nextMaintenanceDate}
+                  onChange={(e) => setEditForm({ ...editForm, nextMaintenanceDate: e.target.value })}
+                />
+                <input
+                  placeholder="Running hours"
+                  type="number"
+                  value={editForm.machineRunningHours}
+                  onChange={(e) => setEditForm({ ...editForm, machineRunningHours: e.target.value })}
+                />
+                <button type="submit" disabled={saving}>Save</button>
+                <button type="button" onClick={() => { setEditingId(null); setEditForm(null); }}>Cancel</button>
+              </form>
+            ) : (
+              <>
+                <strong>{r.maintenanceType === "Corrective" ? "Idle" : r.maintenanceType}</strong> —{" "}
+                {new Date(r.maintenanceDate).toLocaleDateString()} — {r.description}
+                {r.nextMaintenanceDate && (
+                  <span className="muted">
+                    {" "}— Next: {new Date(r.nextMaintenanceDate).toLocaleDateString()}
+                  </span>
+                )}
+                {canEdit && (
+                  <span className="record-actions">
+                    <button className="btn-secondary-sm" onClick={() => openEdit(r)}>Edit</button>{" "}
+                    {canDelete && <button onClick={() => remove(r._id)}>Delete</button>}
+                  </span>
+                )}
+              </>
+            )}
           </div>
         ))}
         {records.length === 0 && <p>No maintenance records yet.</p>}
@@ -588,37 +917,134 @@ function MaintenanceTab({ machineId, records, onSaved }) {
 }
 
 /* ─── Oil Change Tab (unchanged) ─── */
-function OilChangeTab({ machineId, records, onSaved }) {
-  const [form, setForm] = useState({ oilType: "", oilQuantity: "", remarks: "" });
+function OilChangeTab({ machineId, records, onSaved, userRole }) {
+  const [form, setForm] = useState({ oilType: "", oilQuantity: "", remarks: "", reminderMonthsInterval: 6 });
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [error, setError] = useState("");
+
+  const canEdit = ["admin", "general_manager", "employee"].includes(userRole);
+  const isReadOnly = userRole === "owner";
 
   const submit = async (e) => {
     e.preventDefault();
+    setError("");
     setSaving(true);
     try {
       await oilChangeApi.create({ ...form, machine: machineId });
-      setForm({ oilType: "", oilQuantity: "", remarks: "" });
+      setForm({ oilType: "", oilQuantity: "", remarks: "", reminderMonthsInterval: 6 });
       onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save oil change record");
     } finally {
       setSaving(false);
     }
   };
 
+  const openEdit = (record) => {
+    setEditingId(record._id);
+    setEditForm({
+      oilType: record.oilType || "",
+      oilQuantity: record.oilQuantity || "",
+      remarks: record.remarks || "",
+      oilChangeDate: record.oilChangeDate ? record.oilChangeDate.split("T")[0] : "",
+      reminderMonthsInterval: record.reminderMonthsInterval || 6,
+    });
+    setError("");
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editForm) return;
+    setSaving(true);
+    setError("");
+    try {
+      await oilChangeApi.update(editingId, editForm);
+      setEditingId(null);
+      setEditForm(null);
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update oil change record");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm("Delete this oil change record?")) return;
+    try {
+      await oilChangeApi.remove(id);
+      onSaved();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete oil change record");
+    }
+  };
+
   return (
     <div>
+      {error && <div className="error-banner">{error}</div>}
+      {!isReadOnly && (
       <form className="inline-form" onSubmit={submit}>
         <input placeholder="Oil Type"   value={form.oilType}     onChange={(e) => setForm({ ...form, oilType: e.target.value })} />
         <input placeholder="Quantity"   type="number" value={form.oilQuantity}  onChange={(e) => setForm({ ...form, oilQuantity: e.target.value })} />
         <input placeholder="Remarks"   value={form.remarks}     onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
+        <select
+          value={form.reminderMonthsInterval}
+          onChange={(e) => setForm({ ...form, reminderMonthsInterval: e.target.value })}
+          aria-label="Reminder interval months"
+        >
+          <option value="3">3 months</option>
+          <option value="6">6 months</option>
+          <option value="12">12 months</option>
+        </select>
         <button type="submit" disabled={saving}>Log Oil Change</button>
       </form>
+      )}
 
       <div className="record-list">
         {records.map((r) => (
-          <div className="record-row" key={r._id}>
-            <strong>{new Date(r.oilChangeDate).toLocaleDateString()}</strong> — {r.oilType} —{" "}
-            Next due: {new Date(r.nextOilChangeDate).toLocaleDateString()} —{" "}
-            {r.reminderSent ? "Reminder sent" : "Pending reminder"}
+          <div className="record-row oil-row" key={r._id}>
+            {editingId === r._id && editForm ? (
+              <form className="inline-form edit-inline" onSubmit={saveEdit}>
+                <input
+                  type="date"
+                  aria-label="Oil change date"
+                  value={editForm.oilChangeDate}
+                  onChange={(e) => setEditForm({ ...editForm, oilChangeDate: e.target.value })}
+                />
+                <input
+                  placeholder="Oil Type"
+                  value={editForm.oilType}
+                  onChange={(e) => setEditForm({ ...editForm, oilType: e.target.value })}
+                />
+                <input
+                  placeholder="Quantity"
+                  type="number"
+                  value={editForm.oilQuantity}
+                  onChange={(e) => setEditForm({ ...editForm, oilQuantity: e.target.value })}
+                />
+                <input
+                  placeholder="Remarks"
+                  value={editForm.remarks}
+                  onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
+                />
+                <button type="submit" disabled={saving}>Save</button>
+                <button type="button" onClick={() => { setEditingId(null); setEditForm(null); }}>Cancel</button>
+              </form>
+            ) : (
+              <>
+                <strong>{new Date(r.oilChangeDate).toLocaleDateString()}</strong> — {r.oilType} —{" "}
+                Next due: {r.nextOilChangeDate ? new Date(r.nextOilChangeDate).toLocaleDateString() : "—"} —{" "}
+                {r.reminderSent ? "Reminder sent" : "Pending reminder"}
+                {canEdit && (
+                  <span className="record-actions">
+                    <button className="btn-secondary-sm" onClick={() => openEdit(r)}>Edit</button>{" "}
+                    <button onClick={() => remove(r._id)}>Delete</button>
+                  </span>
+                )}
+              </>
+            )}
           </div>
         ))}
         {records.length === 0 && <p>No oil change records yet.</p>}

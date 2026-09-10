@@ -9,11 +9,16 @@ import Dashboard from "./pages/Dashboard";
 import MachineList from "./pages/MachineList";
 import MachineDetail from "./pages/MachineDetail";
 import AddMachine from "./pages/AddMachine";
+import EditMachine from "./pages/EditMachine";
 import Employees from "./pages/Employees";
 import AccountManagement from "./pages/AccountManagement";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
 import Profile from "./pages/Profile";
+import ChangePassword from "./pages/ChangePassword";
+import MachineMonitoring from "./pages/MachineMonitoring";
+import Breakdowns from "./pages/Breakdowns";
+import MaintenancePage from "./pages/MaintenancePage";
 
 import "./App.css";
 
@@ -34,12 +39,26 @@ export default function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/machines" element={<MachineList />} />
+            <Route path="/looms" element={<MachineMonitoring category="loom" />} />
+            <Route path="/compressors" element={<MachineMonitoring category="compressor" />} />
+            <Route path="/air-dryers" element={<MachineMonitoring category="air_dryer" />} />
+            <Route path="/breakdowns" element={<Breakdowns />} />
+            <Route path="/maintenance" element={<MaintenancePage />} />
             <Route
               path="/machines/:id"
               element={
-                <ProtectedRoute allowedRoles={["general_manager", "employee"]}>
+                <ProtectedRoute allowedRoles={["admin", "owner", "general_manager", "employee"]}>
                   <MachineDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/machines/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <EditMachine />
                 </ProtectedRoute>
               }
             />
@@ -70,7 +89,7 @@ export default function App() {
             <Route
               path="/employees"
               element={
-                <ProtectedRoute allowedRoles={["general_manager"]}>
+                <ProtectedRoute allowedRoles={["admin", "general_manager"]}>
                   <Employees />
                 </ProtectedRoute>
               }
@@ -79,7 +98,7 @@ export default function App() {
             <Route
               path="/reports"
               element={
-                <ProtectedRoute allowedRoles={["employee"]}>
+                <ProtectedRoute allowedRoles={["admin", "employee", "general_manager", "owner"]}>
                   <Reports />
                 </ProtectedRoute>
               }

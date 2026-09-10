@@ -6,6 +6,16 @@ import apiClient from "../api/client";
 
 const profilePhotoUrl = (photo) => (photo ? new URL(photo, apiClient.defaults.baseURL).href : "");
 
+const ROLE_LABEL = {
+  admin: "ADMIN",
+  owner: "OWNER",
+  general_manager: "MANAGER",
+  employee: "EMPLOYEE",
+};
+
+const todayLabel = () =>
+  new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -19,17 +29,21 @@ export default function Navbar() {
 
   return (
     <header className="navbar">
-      <div className="navbar-title">Textile Mill Maintenance</div>
+      <div className="navbar-brand">
+        <strong>MMS</strong>
+        <span className="navbar-brand-sub">Loom Monitoring System</span>
+      </div>
       <div className="navbar-right">
-        <div className="notification-bell">
+        <span className="navbar-date">{todayLabel()}</span>
+        <Link to="/notifications" className="notification-bell" aria-label="Notifications">
           🔔 {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
-        </div>
+        </Link>
         <div className="profile-menu">
           {user?.profilePhoto && (
             <img className="profile-photo" src={profilePhotoUrl(user.profilePhoto)} alt={`${user.name}'s profile`} />
           )}
           <Link className="profile-link" to="/profile">{user?.name}</Link>
-          <span className="role-tag">{user?.role}</span>
+          <span className="role-tag">{ROLE_LABEL[user?.role] || user?.role}</span>
           <button onClick={logout}>Logout</button>
         </div>
       </div>

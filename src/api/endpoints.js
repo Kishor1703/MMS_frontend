@@ -23,6 +23,8 @@ export const machineApi = {
   updateStatus: (id, status) => apiClient.patch(`/machines/${id}/status`, { status }),
   remove: (id) => apiClient.delete(`/machines/${id}`),
   assign: (id, employeeIds) => apiClient.post(`/machines/${id}/assign`, { employeeIds }),
+  addDocuments: (id, documents) => apiClient.post(`/machines/${id}/documents`, { documents }),
+  removeDocument: (id, url) => apiClient.delete(`/machines/${id}/documents`, { data: { url } }),
 };
 
 export const employeeApi = {
@@ -78,4 +80,24 @@ export const uploadApi = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+};
+
+export const compressorMaintenanceApi = {
+  list: (params) => apiClient.get("/compressor-maintenance", { params }),
+  schedule: (machine) =>
+    apiClient.get("/compressor-maintenance/schedule", { params: { machine } }),
+  create: (data) => apiClient.post("/compressor-maintenance", data),
+  getById: (id) => apiClient.get(`/compressor-maintenance/${id}`),
+  update: (id, data) => apiClient.put(`/compressor-maintenance/${id}`, data),
+  remove: (id) => apiClient.delete(`/compressor-maintenance/${id}`),
+};
+
+export const airDryerMaintenanceApi = {
+  list: (params) => apiClient.get("/air-dryer-maintenance", { params }),
+  schedule: (machine) =>
+    apiClient.get("/air-dryer-maintenance/schedule", { params: { machine } }),
+  create: (data) => apiClient.post("/air-dryer-maintenance", data),
+  getById: (id) => apiClient.get(`/air-dryer-maintenance/${id}`),
+  update: (id, data) => apiClient.put(`/air-dryer-maintenance/${id}`, data),
+  remove: (id) => apiClient.delete(`/air-dryer-maintenance/${id}`),
 };
