@@ -1,57 +1,26 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const ownerLinks = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/machines", label: "Machines" },
+const categoryLinks = [
+  { to: "/machines", label: "All Machines", end: false },
+  { to: "/looms", label: "Looms" },
   { to: "/compressors", label: "Compressors" },
   { to: "/air-dryers", label: "Air Dryers" },
-  { to: "/general-managers", label: "General Managers" },
-  { to: "/reports", label: "Reports" },
-  { to: "/leaves", label: "Leaves" },
-  { to: "/notifications", label: "Notifications" },
 ];
 
-const adminLinks = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/machines", label: "Machines" },
-  { to: "/compressors", label: "Compressors" },
-  { to: "/air-dryers", label: "Air Dryers" },
+const adminAccountLinks = [
   { to: "/owners", label: "Company Owners" },
-  { to: "/reports", label: "Reports" },
-  { to: "/notifications", label: "Notifications" },
 ];
 
-const generalManagerLinks = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/machines", label: "Machines" },
-  { to: "/compressors", label: "Compressors" },
-  { to: "/air-dryers", label: "Air Dryers" },
-  { to: "/employees", label: "Employees" },
-  { to: "/notifications", label: "Notifications" },
-  { to: "/reports", label: "Reports" },
-  { to: "/leaves", label: "Leaves" },
-];
-
-const employeeLinks = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/machines", label: "My Machines" },
-  { to: "/compressors", label: "My Compressors" },
-  { to: "/air-dryers", label: "My Air Dryers" },
-  { to: "/notifications", label: "Notifications" },
-  { to: "/reports", label: "Reports" },
-  { to: "/leaves", label: "Leaves" },
+const ownerAccountLinks = [
+  { to: "/general-managers", label: "General Managers" },
 ];
 
 export default function Sidebar() {
   const { hasRole } = useAuth();
-  const links = hasRole("admin")
-    ? adminLinks
-    : hasRole("owner")
-      ? ownerLinks
-      : hasRole("general_manager")
-        ? generalManagerLinks
-        : employeeLinks;
+  const isAdmin = hasRole("admin");
+  const isOwner = hasRole("owner");
+  const accountLinks = isAdmin ? adminAccountLinks : isOwner ? ownerAccountLinks : [];
 
   return (
     <aside className="sidebar">
@@ -76,15 +45,72 @@ export default function Sidebar() {
         LoomTrack
       </div>
       <nav>
-        {links.map((link) => (
+        <NavLink
+          to="/dashboard"
+          end
+          className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+        >
+          Dashboard
+        </NavLink>
+
+        <div className="sidebar-group-label">Machine Monitoring</div>
+        {categoryLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
-            className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+            end={link.end}
+            className={({ isActive }) => `sidebar-link sidebar-link-sub${isActive ? " active" : ""}`}
           >
             {link.label}
           </NavLink>
         ))}
+
+        <NavLink
+          to="/breakdowns"
+          className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+        >
+          Breakdown
+        </NavLink>
+        <NavLink
+          to="/maintenance"
+          className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+        >
+          Maintenance
+        </NavLink>
+        {hasRole("admin", "general_manager") && (
+          <NavLink
+            to="/employees"
+            className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+          >
+            Employees
+          </NavLink>
+        )}
+        <NavLink
+          to="/reports"
+          className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+        >
+          Reports
+        </NavLink>
+        <NavLink
+          to="/notifications"
+          className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
+        >
+          Notifications
+        </NavLink>
+        {accountLinks.length > 0 && (
+          <>
+            <div className="sidebar-group-label">Settings</div>
+            {accountLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) => `sidebar-link sidebar-link-sub${isActive ? " active" : ""}`}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
     </aside>
   );

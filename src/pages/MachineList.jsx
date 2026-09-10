@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 
 const statusColors = {
   Running: "green",
+  Stopped: "blue",
   "Under Maintenance": "orange",
   Breakdown: "red",
   Idle: "gray",
@@ -17,16 +18,15 @@ const getLayoutMachineNumber = (row, column, width) => {
 };
 
 export default function MachineList() {
-  const { hasRole, isAdmin, isOwner } = useAuth();
-  const canOpenMachine = hasRole("employee");
-  const canEditMachine = isAdmin || isOwner;
+  const { isAdmin, isOwner } = useAuth();
+  const canOpenMachine = true;
   const [machines, setMachines] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const company = searchParams.get("company") || "";
-  const assetType = "Machine";
+  const status = searchParams.get("status") || "";
+  const section = searchParams.get("section") || "";
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [companiesLoaded, setCompaniesLoaded] = useState(false);
@@ -34,12 +34,21 @@ export default function MachineList() {
   const companyLayout = company ? companyLayoutData : null;
   const loadingCompanies = isAdmin && !companiesLoaded;
 
+  const updateParams = (patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([key, value]) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    });
+    setSearchParams(next);
+  };
+
   const selectCompany = (companyName) => {
-    setSearchParams({ company: companyName });
+    setSearchParams({ ...Object.fromEntries(searchParams), company: companyName });
   };
 
   const clearCompany = () => {
-    setSearchParams({});
+    setSearchParams({ status: status || undefined, section: section || undefined });
   };
 
   const deleteMachine = async (machine) => {
@@ -59,7 +68,7 @@ export default function MachineList() {
   const loadMachines = () => {
     setLoading(true);
     machineApi
-      .list({ search, status, company, assetType })
+      .list({ search, status, company, section })
       .then((res) => setMachines(res.data.data))
       .finally(() => setLoading(false));
   };
@@ -69,7 +78,7 @@ export default function MachineList() {
     const timeout = setTimeout(loadMachines, 300);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, search, status, company, assetType]);
+  }, [isAdmin, search, status, company, section]);
 
   useEffect(() => {
     if (!isAdmin) return undefined;
@@ -100,6 +109,28 @@ export default function MachineList() {
         </div>
         <p>{machine.machineNumber}</p>
         <p className="muted">{machine.machineType}</p>
+        {machine.section && <p className="muted">Section: {machine.section}</p>}
+        {isAdmin && (
+          <div className="machine-card-actions" onClick={(e) => e.preventDefault()}>
+            <Link
+              to={`/machines/${machine._id}/edit`}
+              className="btn-secondary-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Edit
+            </Link>
+            <button
+              type="button"
+              className="btn-danger-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteMachine(machine);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </>
     );
 
@@ -162,17 +193,23 @@ export default function MachineList() {
         <>
           <div className="filter-bar">
             <input
-              placeholder="Search by name or number..."
+              placeholder="Search machines by name, number, section or shed..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select value={status} onChange={(e) => updateParams({ status: e.target.value })}>
               <option value="">All Statuses</option>
               <option value="Running">Running</option>
+              <option value="Stopped">Stopped</option>
               <option value="Under Maintenance">Under Maintenance</option>
               <option value="Breakdown">Breakdown</option>
               <option value="Idle">Idle</option>
             </select>
+            {section && (
+              <button type="button" className="company-filter" onClick={() => updateParams({ section: "" })}>
+                Section: {section} ✕
+              </button>
+            )}
             {isAdmin && (
               <button type="button" className="company-filter" onClick={clearCompany}>
                 Back to Companies

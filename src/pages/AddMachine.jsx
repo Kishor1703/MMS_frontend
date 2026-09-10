@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { authApi, machineApi } from "../api/endpoints";
+import { MACHINE_CATEGORIES, MACHINE_TYPE_OPTIONS } from "../constants/machineCategories";
 
 const empty = {
   assetType: "Machine",
@@ -8,13 +9,37 @@ const empty = {
   machineName: "",
   machineNumber: "",
   machineType: "",
+  machineCategory: "loom",
   company: "",
   modelNumber: "",
   serialNumber: "",
   purchaseDate: "",
   installationDate: "",
   warrantyExpiry: "",
-  machineImage: "",
+  section: "",
+  shed: "",
+  brand: "",
+  rpm: "",
+  width: "",
+  assignedEngineer: "",
+  notes: "",
+  pressure: "",
+  temperature: "",
+  oilLevel: "",
+  oilFilterStatus: "",
+  airFilterStatus: "",
+  separatorCondition: "",
+  differentialPressure: "",
+  oilCarryoverStatus: "",
+  separatorElementStatus: "",
+  oRingOrSealStatus: "",
+  coolantLevel: "",
+  inletPressure: "",
+  outletPressure: "",
+  dewPoint: "",
+  drainStatus: "",
+  filterCondition: "",
+  cleaningStatus: "",
 };
 
 const layoutOptions = [[2, 3, 4, 5], [6, 7, 8], [9, 10]];
@@ -32,12 +57,16 @@ export default function AddMachine() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isEditMode = Boolean(id);
   const companyParam = searchParams.get("company") || "";
-  const [form, setForm] = useState({ ...empty, assetType: "Machine" });
+  const categoryParam = searchParams.get("category") || "";
+  const isEditMode = Boolean(id);
+  const lockedMeta = categoryParam ? MACHINE_CATEGORIES[categoryParam] : null;
+  const isLockedCategory = Boolean(lockedMeta);
+  const sectionName = lockedMeta?.single || "Machine";
+  const backRoute = lockedMeta?.route || "/machines";
+  const [form, setForm] = useState({ ...empty, machineCategory: searchParams.get("category") || "loom" });
+  const activeType = MACHINE_CATEGORIES[form.machineCategory]?.single || "Machine";
   const [error, setError] = useState("");
-  const [companies, setCompanies] = useState([]);
-  const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [saving, setSaving] = useState(false);
   const [usedMachineNumbers, setUsedMachineNumbers] = useState([]);
   const [layoutSaved, setLayoutSaved] = useState(false);
@@ -211,44 +240,134 @@ export default function AddMachine() {
     }
   };
 
+  const startAnotherMachine = () => {
+    setForm({ ...empty, machineCategory: categoryParam || "loom" });
+    setSavedMachine(null);
+    setLayoutSaved(false);
+    setLayoutSize(DEFAULT_LAYOUT_SIZE);
+    setLayoutMachineCount(DEFAULT_LAYOUT_MACHINE_COUNT);
+    resetLayoutAccess();
+    setError("");
+  };
+
   return (
     <div>
-      <h1>{isEditMode ? "Edit Machine" : "Add Machine"}</h1>
+      <h1>{isLockedCategory ? `Add ${sectionName}` : "Add Machine"}</h1>
       {error && <div className="error-banner">{error}</div>}
 
       <div className={isEditMode ? "" : "add-machine-layout"}>
         <form className="detail-form add-machine-form" onSubmit={submit}>
-          <label>Machine ID</label>
-          <input value={form.machineId} onChange={handleChange("machineId")} required />
-
-          <label>Machine Name</label>
-          <input value={form.machineName} onChange={handleChange("machineName")} required />
-
-          <label>Machine Number</label>
-          {isEditMode ? (
-            <input value={form.machineNumber} onChange={handleChange("machineNumber")} required />
-          ) : (
-            <select value={form.machineNumber} onChange={handleChange("machineNumber")} required>
-              <option value="">Select layout number</option>
-              {availableMachineNumbers.map((machineNumber) => (
-                <option key={machineNumber} value={machineNumber}>
-                  Machine {machineNumber}
-                </option>
-              ))}
-            </select>
+          {isLockedCategory && (
+            <p className="locked-category-note">
+              Adding a new {sectionName} to the {lockedMeta.label} section.
+            </p>
+          )}
+          {!isLockedCategory && (
+            <>
+              <label>Machine Category</label>
+              <select value={form.machineCategory} onChange={handleChange("machineCategory")} required>
+                {MACHINE_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
 
-          <label>Machine Type</label>
-          <input value={form.machineType} onChange={handleChange("machineType")} />
+          <label>{activeType} ID</label>
+          <input value={form.machineId} onChange={handleChange("machineId")} required />
+
+          <label>{activeType} Name</label>
+          <input value={form.machineName} onChange={handleChange("machineName")} required />
+
+          <label>{activeType} Number</label>
+          <select value={form.machineNumber} onChange={handleChange("machineNumber")} required>
+            <option value="">Select {activeType} number</option>
+            {availableMachineNumbers.map((machineNumber) => (
+              <option key={machineNumber} value={machineNumber}>
+                {activeType} {machineNumber}
+              </option>
+            ))}
+          </select>
+
+          {form.machineCategory === "loom" && (
+            <>
+              <label>Machine Type</label>
+              <input value={form.machineType} onChange={handleChange("machineType")} placeholder="e.g. Air Jet" />
+            </>
+          )}
 
           <label>Company</label>
           <input value={company} readOnly required placeholder="Select a company first" />
+
+          <label>Brand</label>
+          <input value={form.brand} onChange={handleChange("brand")} />
 
           <label>Model Number</label>
           <input value={form.modelNumber} onChange={handleChange("modelNumber")} />
 
           <label>Serial Number</label>
           <input value={form.serialNumber} onChange={handleChange("serialNumber")} />
+
+          <label>Section</label>
+          <input value={form.section} onChange={handleChange("section")} placeholder="e.g. Weaving Shed 1" />
+
+          <label>Shed</label>
+          <input value={form.shed} onChange={handleChange("shed")} placeholder="e.g. A" />
+
+          {form.machineCategory === "loom" && (
+            <>
+              <label>RPM</label>
+              <input type="number" value={form.rpm} onChange={handleChange("rpm")} />
+              <label>Width (cm)</label>
+              <input type="number" value={form.width} onChange={handleChange("width")} />
+            </>
+          )}
+
+          {form.machineCategory === "compressor" && (
+            <>
+              <label>Pressure (bar)</label>
+              <input type="number" step="0.1" value={form.pressure} onChange={handleChange("pressure")} />
+              <label>Temperature (°C)</label>
+              <input type="number" step="0.1" value={form.temperature} onChange={handleChange("temperature")} />
+              <label>Oil Level</label>
+              <input value={form.oilLevel} onChange={handleChange("oilLevel")} placeholder="e.g. Low / Normal / High" />
+              <label>Oil Filter Status</label>
+              <input value={form.oilFilterStatus} onChange={handleChange("oilFilterStatus")} placeholder="e.g. OK / Due / Clogged" />
+              <label>Air Filter Status</label>
+              <input value={form.airFilterStatus} onChange={handleChange("airFilterStatus")} placeholder="e.g. OK / Due / Clogged" />
+              <label>Separator Condition</label>
+              <input value={form.separatorCondition} onChange={handleChange("separatorCondition")} placeholder="e.g. Good / Due / Failing" />
+              <label>Differential Pressure</label>
+              <input type="number" step="0.1" value={form.differentialPressure} onChange={handleChange("differentialPressure")} />
+              <label>Oil Carryover Status</label>
+              <input value={form.oilCarryoverStatus} onChange={handleChange("oilCarryoverStatus")} placeholder="e.g. Normal / Above Limit" />
+              <label>Separator Element Status</label>
+              <input value={form.separatorElementStatus} onChange={handleChange("separatorElementStatus")} placeholder="e.g. OK / Due for replacement" />
+              <label>O-ring / Seal Status</label>
+              <input value={form.oRingOrSealStatus} onChange={handleChange("oRingOrSealStatus")} placeholder="e.g. OK / Worn" />
+              <label>Coolant Level</label>
+              <input value={form.coolantLevel} onChange={handleChange("coolantLevel")} placeholder="e.g. Low / Normal / High" />
+            </>
+          )}
+
+          {form.machineCategory === "air_dryer" && (
+            <>
+              <label>Inlet Pressure (bar)</label>
+              <input type="number" step="0.1" value={form.inletPressure} onChange={handleChange("inletPressure")} />
+              <label>Outlet Pressure (bar)</label>
+              <input type="number" step="0.1" value={form.outletPressure} onChange={handleChange("outletPressure")} />
+              <label>Dew Point (°C)</label>
+              <input type="number" step="0.1" value={form.dewPoint} onChange={handleChange("dewPoint")} />
+              <label>Drain Status</label>
+              <input value={form.drainStatus} onChange={handleChange("drainStatus")} placeholder="e.g. Auto OK / Manual / Clogged" />
+              <label>Filter Condition</label>
+              <input value={form.filterCondition} onChange={handleChange("filterCondition")} placeholder="e.g. Good / Due / Replace" />
+              <label>Cleaning Status</label>
+              <input value={form.cleaningStatus} onChange={handleChange("cleaningStatus")} placeholder="e.g. Cleaned / Due" />
+            </>
+          )}
 
           <label>Purchase Date</label>
           <input type="date" value={form.purchaseDate} onChange={handleChange("purchaseDate")} />
@@ -259,16 +378,25 @@ export default function AddMachine() {
           <label>Warranty Expiry</label>
           <input type="date" value={form.warrantyExpiry} onChange={handleChange("warrantyExpiry")} />
 
-          <label>Machine Image URL</label>
-          <input value={form.machineImage} onChange={handleChange("machineImage")} />
+          <label>Assigned Engineer</label>
+          <input value={form.assignedEngineer} onChange={handleChange("assignedEngineer")} />
 
-          <button type="submit" disabled={saving}>
-            {saving ? "Saving..." : isEditMode ? "Update Machine" : "Save Machine"}
+          <label>Notes</label>
+          <textarea rows={3} value={form.notes} onChange={handleChange("notes")} />
+
+          <button type="submit" disabled={saving || isSaved}>
+            {saving ? "Saving..." : isSaved ? `${sectionName} Saved` : `Save ${sectionName}`}
           </button>
 
-          <Link to="/machines" className="btn-secondary">
-            Back to Machines
+          <Link to={`${backRoute}${company ? `?company=${encodeURIComponent(company)}` : ""}`} className="btn-secondary">
+            {isLockedCategory ? `Back to ${lockedMeta.label}` : "Back to Companies"}
           </Link>
+
+          {isSaved && (
+            <button type="button" className="btn-secondary" onClick={startAnotherMachine}>
+              Create Another {sectionName}
+            </button>
+          )}
         </form>
 
         {!isEditMode && (
