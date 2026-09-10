@@ -14,6 +14,7 @@ import Employees from "./pages/Employees";
 import AccountManagement from "./pages/AccountManagement";
 import Notifications from "./pages/Notifications";
 import Reports from "./pages/Reports";
+import LeaveManagement from "./pages/LeaveManagement";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 import MachineMonitoring from "./pages/MachineMonitoring";
@@ -71,6 +72,30 @@ export default function App() {
               }
             />
             <Route
+              path="/machines/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "owner"]}>
+                  <AddMachine />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/compressors/new"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Compressor" /></ProtectedRoute>}
+            />
+            <Route
+              path="/compressors/:id/edit"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Compressor" /></ProtectedRoute>}
+            />
+            <Route
+              path="/air-dryers/new"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Air Dryer" /></ProtectedRoute>}
+            />
+            <Route
+              path="/air-dryers/:id/edit"
+              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Air Dryer" /></ProtectedRoute>}
+            />
+            <Route
               path="/owners"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
@@ -100,6 +125,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin", "employee", "general_manager", "owner"]}>
                   <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaves"
+              element={
+                <ProtectedRoute allowedRoles={["owner", "general_manager", "employee"]}>
+                  <LeaveManagement />
                 </ProtectedRoute>
               }
             />

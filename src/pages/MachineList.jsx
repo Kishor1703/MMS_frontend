@@ -28,6 +28,7 @@ export default function MachineList() {
   const status = searchParams.get("status") || "";
   const section = searchParams.get("section") || "";
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [companiesLoaded, setCompaniesLoaded] = useState(false);
   const [companyLayoutData, setCompanyLayoutData] = useState(null);
   const companyLayout = company ? companyLayoutData : null;
@@ -48,6 +49,20 @@ export default function MachineList() {
 
   const clearCompany = () => {
     setSearchParams({ status: status || undefined, section: section || undefined });
+  };
+
+  const deleteMachine = async (machine) => {
+    if (!window.confirm(`Delete ${machine.machineName} (${machine.machineNumber})?`)) return;
+
+    setDeletingId(machine._id);
+    try {
+      await machineApi.remove(machine._id);
+      loadMachines();
+    } catch (err) {
+      window.alert(err.response?.data?.message || "Failed to delete machine");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const loadMachines = () => {
@@ -119,28 +134,34 @@ export default function MachineList() {
       </>
     );
 
-    return canOpenMachine ? (
-      <Link to={`/machines/${machine._id}`} className="machine-card machine-card-main">
-        {card}
-      </Link>
-    ) : (
-      <div className="machine-card machine-card-main" aria-disabled="true">
-        {card}
-      </div>
+    return (
+      <>
+        {canOpenMachine ? (
+          <Link to={`/machines/${machine._id}`} className="machine-card machine-card-main">
+            {card}
+          </Link>
+        ) : (
+          <div className="machine-card machine-card-main" aria-disabled="true">
+            {card}
+          </div>
+        )}
+        {canEditMachine && (
+          <Link className="btn-secondary machine-edit-link" to={`/machines/${machine._id}/edit`}>
+            Edit machine
+          </Link>
+        )}
+        {isAdmin && (
+          <button
+            type="button"
+            className="btn-secondary machine-delete-link"
+            onClick={() => deleteMachine(machine)}
+            disabled={deletingId === machine._id}
+          >
+            {deletingId === machine._id ? "Deleting..." : "Delete machine"}
+          </button>
+        )}
+      </>
     );
-  };
-
-  const deleteMachine = async (machine) => {
-    if (!window.confirm(`Delete loom "${machine.machineName}"? This action cannot be undone.`)) {
-      return;
-    }
-    try {
-      await machineApi.remove(machine._id);
-      loadMachines();
-    } catch (err) {
-      // surface via temporary state in future; for now alert
-      window.alert(err.response?.data?.message || "Failed to delete machine");
-    }
   };
 
   return (
@@ -148,9 +169,7 @@ export default function MachineList() {
       <div className="page-header">
         <h1>{isAdmin || isOwner ? "Machines" : "My Assigned Machines"}</h1>
         {isAdmin && company && (
-          <Link to={`/machines/new?company=${encodeURIComponent(company)}`} className="btn-primary">
-            + Add Machine
-          </Link>
+          <Link to={`/machines/new?company=${encodeURIComponent(company)}`} className="btn-primary">+ Add Machine</Link>
         )}
       </div>
 

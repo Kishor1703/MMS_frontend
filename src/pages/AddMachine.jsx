@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { authApi, machineApi } from "../api/endpoints";
 import { MACHINE_CATEGORIES, MACHINE_TYPE_OPTIONS } from "../constants/machineCategories";
 
 const empty = {
+  assetType: "Machine",
   machineId: "",
   machineName: "",
   machineNumber: "",
@@ -49,14 +50,16 @@ const getLayoutMachineCount = (layout) => {
   const width = Number(layout?.width) || DEFAULT_LAYOUT_SIZE;
   const length = Number(layout?.length) || DEFAULT_LAYOUT_SIZE;
   const machineCount = Number(layout?.machineCount);
-
   return Number.isInteger(machineCount) && machineCount > 0 ? machineCount : width * length;
 };
 
 export default function AddMachine() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const company = searchParams.get("company") || "";
+  const companyParam = searchParams.get("company") || "";
   const categoryParam = searchParams.get("category") || "";
+  const isEditMode = Boolean(id);
   const lockedMeta = categoryParam ? MACHINE_CATEGORIES[categoryParam] : null;
   const isLockedCategory = Boolean(lockedMeta);
   const sectionName = lockedMeta?.single || "Machine";
@@ -66,9 +69,8 @@ export default function AddMachine() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [usedMachineNumbers, setUsedMachineNumbers] = useState([]);
-  const [savedMachine, setSavedMachine] = useState(null);
   const [layoutSaved, setLayoutSaved] = useState(false);
-  const [layoutSize, setLayoutSize] = useState(2);
+  const [layoutSize, setLayoutSize] = useState(DEFAULT_LAYOUT_SIZE);
   const [layoutMachineCount, setLayoutMachineCount] = useState(DEFAULT_LAYOUT_MACHINE_COUNT);
   const [layoutUnlocked, setLayoutUnlocked] = useState(false);
   const [layoutPassword, setLayoutPassword] = useState("");
@@ -76,14 +78,7 @@ export default function AddMachine() {
   const [layoutSaving, setLayoutSaving] = useState(false);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
 
-  const handleChange = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-  const resetLayoutAccess = () => {
-    setLayoutUnlocked(false);
-    setLayoutPassword("");
-    setLayoutPasswordError("");
-    setShowPasswordPrompt(false);
-  };
-
+  const company = isEditMode ? form.company : companyParam;
   const machineCount = Math.max(1, Number(layoutMachineCount) || 1);
   const layoutLength = Math.max(1, Math.ceil(machineCount / layoutSize));
   const layoutCells = Array.from({ length: machineCount }, (_, index) => {
@@ -91,38 +86,68 @@ export default function AddMachine() {
     const column = (index % layoutSize) + 1;
     const rowBand = Math.floor((row - 1) / 2);
     const rowInBand = (row - 1) % 2;
-    const machineNumber =
-      rowBand * layoutSize * 2 + (layoutSize - column) * 2 + rowInBand + 1;
-
+    const machineNumber = rowBand * layoutSize * 2 + (layoutSize - column) * 2 + rowInBand + 1;
     return { row, column, machineNumber };
   });
+
   const availableMachineNumbers = layoutCells
     .map(({ machineNumber }) => String(machineNumber))
-    .filter((machineNumber) =>
-      !usedMachineNumbers.includes(machineNumber) || machineNumber === form.machineNumber
-    );
+    .filter((machineNumber) => !usedMachineNumbers.includes(machineNumber) || machineNumber === form.machineNumber);
 
-  const isSaved = Boolean(savedMachine);
-  const canEditLayout = !layoutSaved || layoutUnlocked;
+  const handleChange = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
+  const resetLayoutAccess = () => {
+    setLayoutUnlocked(false);
+    setLayoutPassword("");
+    setLayoutPasswordError("");
+    setShowPasswordPrompt(false);
+  };
 
   useEffect(() => {
-    if (savedMachine || !company) return;
+    if (!isEditMode) return undefined;
+
+    let active = true;
+    machineApi
+      .getById(id)
+      .then((response) => {
+        if (!active) return;
+        const machine = response.data.data.machine;
+        setForm({
+          assetType: machine.assetType || "Machine",
+          machineId: machine.machineId || "",
+          machineName: machine.machineName || "",
+          machineNumber: machine.machineNumber || "",
+          machineType: machine.machineType || "",
+          company: machine.company || "",
+          modelNumber: machine.modelNumber || "",
+          serialNumber: machine.serialNumber || "",
+          purchaseDate: machine.purchaseDate ? machine.purchaseDate.slice(0, 10) : "",
+          installationDate: machine.installationDate ? machine.installationDate.slice(0, 10) : "",
+          warrantyExpiry: machine.warrantyExpiry ? machine.warrantyExpiry.slice(0, 10) : "",
+          machineImage: machine.machineImage || "",
+        });
+      })
+      .catch(() => setError("Failed to load machine data"));
+
+    return () => {
+      active = false;
+    };
+  }, [id, isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode || !companyParam) return undefined;
 
     let active = true;
     Promise.all([
-      machineApi.companyLayout(company),
-      machineApi.list({ company, limit: 1000 }),
+      machineApi.companyLayout(companyParam).catch(() => ({ data: { data: null } })),
+      machineApi.list({ company: companyParam, limit: 1000 }).catch(() => ({ data: { data: [] } })),
     ])
       .then(([layoutRes, machinesRes]) => {
         if (!active) return;
         const layout = layoutRes.data.data;
-        setUsedMachineNumbers(
-          machinesRes.data.data
-            .map((machine) => String(machine.machineNumber))
-            .filter(Boolean)
-        );
+        const machines = machinesRes.data.data || [];
+        setUsedMachineNumbers(machines.map((machine) => String(machine.machineNumber)).filter(Boolean));
         if (layout) {
-          setLayoutSize(layout.width);
+          setLayoutSize(layout.width || DEFAULT_LAYOUT_SIZE);
           setLayoutMachineCount(getLayoutMachineCount(layout));
           setLayoutSaved(true);
         } else {
@@ -130,39 +155,38 @@ export default function AddMachine() {
         }
         resetLayoutAccess();
       })
-      .catch(() => {
-        if (active) setError("Failed to load the company layout");
-      });
+      .catch(() => setError("Failed to load machine form data"));
 
     return () => {
       active = false;
     };
-  }, [company, savedMachine]);
+  }, [companyParam, isEditMode]);
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (isSaved) return;
-
+  const submit = async (event) => {
+    event.preventDefault();
     setSaving(true);
     setError("");
 
     try {
-      const res = await machineApi.create({
+      const payload = {
         ...form,
         company,
+      };
+      if (isEditMode) {
+        await machineApi.update(id, payload);
+        navigate("/machines");
+        return;
+      }
+
+      await machineApi.create({
+        ...payload,
         layoutWidth: layoutSize,
         layoutLength,
         machineCount,
       });
-
-      const machine = res.data.data;
-      setSavedMachine(machine);
-      setLayoutSaved(true);
-      setLayoutSize(machine.layout?.width || layoutSize);
-      setLayoutMachineCount(getLayoutMachineCount(machine.layout));
-      resetLayoutAccess();
+      navigate("/machines");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create machine");
+      setError(err.response?.data?.message || "Failed to save machine");
     } finally {
       setSaving(false);
     }
@@ -174,8 +198,8 @@ export default function AddMachine() {
     setShowPasswordPrompt(true);
   };
 
-  const confirmAdminPassword = async (e) => {
-    e.preventDefault();
+  const confirmAdminPassword = async (event) => {
+    event.preventDefault();
     setLayoutSaving(true);
     setLayoutPasswordError("");
 
@@ -207,16 +231,6 @@ export default function AddMachine() {
         machineCount,
         adminPassword: layoutPassword || undefined,
       });
-
-      if (savedMachine) {
-        const res = await machineApi.updateLayout(savedMachine._id, {
-          layoutWidth: layoutSize,
-          layoutLength,
-          machineCount,
-          adminPassword: layoutPassword,
-        });
-        setSavedMachine(res.data.data);
-      }
       setLayoutSaved(true);
       resetLayoutAccess();
     } catch (err) {
@@ -241,7 +255,7 @@ export default function AddMachine() {
       <h1>{isLockedCategory ? `Add ${sectionName}` : "Add Machine"}</h1>
       {error && <div className="error-banner">{error}</div>}
 
-      <div className="add-machine-layout">
+      <div className={isEditMode ? "" : "add-machine-layout"}>
         <form className="detail-form add-machine-form" onSubmit={submit}>
           {isLockedCategory && (
             <p className="locked-category-note">
@@ -385,145 +399,138 @@ export default function AddMachine() {
           )}
         </form>
 
-        <section className="machine-layout-card" aria-labelledby="machine-layout-title">
-          <div className="machine-layout-heading">
-            <div>
-              <h2 id="machine-layout-title">Machine Layout</h2>
-              <p>Choose a layout to preview the machine positions.</p>
-            </div>
-            <span className="layout-size-badge">
-              {layoutSize} x {layoutLength} | {machineCount} slots
-            </span>
-          </div>
-
-          {layoutSaved && (
-            <div className="layout-lock-banner">
-              <span>
-                {layoutUnlocked
-                  ? "Layout unlocked for editing."
-                  : isSaved
-                    ? "Layout locked after save."
-                    : "Layout saved. Save the machine to persist it."}
-              </span>
-              <button type="button" className="btn-ghost" onClick={requestLayoutEdit} disabled={layoutUnlocked}>
-                {layoutUnlocked ? "Already unlocked" : "Edit with Admin Password"}
-              </button>
-            </div>
-          )}
-
-          <div className="layout-selector" aria-label="Select machine layout size">
-            {layoutOptions.map((row) => (
-              <div className="layout-option-row" key={row[0]}>
-                {row.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    className={`layout-option ${layoutSize === size ? "active" : ""}`}
-                    onClick={() => {
-                      if (!canEditLayout) return;
-                      setLayoutSize(size);
-                      setLayoutMachineCount(size * size);
-                    }}
-                    aria-pressed={layoutSize === size}
-                    disabled={!canEditLayout}
-                  >
-                    Layout {size}
-                  </button>
-                ))}
+        {!isEditMode && (
+          <section className="machine-layout-card" aria-labelledby="machine-layout-title">
+            <div className="machine-layout-heading">
+              <div>
+                <h2 id="machine-layout-title">Machine Layout</h2>
+                <p>Choose a layout to preview the machine positions.</p>
               </div>
-            ))}
-          </div>
-
-          <label className="layout-length-input">
-            <span>Machine slots</span>
-            <div className="layout-stepper">
-              <button
-                type="button"
-                className="layout-stepper-btn"
-                onClick={() => {
-                  if (!canEditLayout) return;
-                  setLayoutMachineCount((current) => Math.max(1, Number(current) - 1));
-                }}
-                disabled={!canEditLayout || machineCount <= 1}
-                aria-label="Remove one machine slot"
-              >
-                -
-              </button>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                value={machineCount}
-                onChange={(event) => {
-                  if (!canEditLayout) return;
-                  const value = event.target.value;
-                  setLayoutMachineCount(value === "" ? "" : Math.min(50, Math.max(1, Number(value))));
-                }}
-                disabled={!canEditLayout}
-              />
-              <button
-                type="button"
-                className="layout-stepper-btn"
-                onClick={() => {
-                  if (!canEditLayout) return;
-                  setLayoutMachineCount((current) => Math.min(50, Number(current) + 1));
-                }}
-                disabled={!canEditLayout || machineCount >= 50}
-                aria-label="Add one machine slot"
-              >
-                +
-              </button>
+              <span className="layout-size-badge">
+                {layoutSize} x {layoutLength} | {machineCount} slots
+              </span>
             </div>
-            <small>Add one machine at a time. Width stays at {layoutSize} columns.</small>
-          </label>
 
-          <div className="orientation-key" aria-label="Layout orientation">
-            <span><strong>N</strong> North (top)</span>
-            <span><strong>E</strong> East (right)</span>
-            <span><strong>S</strong> South (bottom)</span>
-            <span><strong>W</strong> West (left)</span>
-          </div>
+            {layoutSaved && (
+              <div className="layout-lock-banner">
+                <span>
+                  {layoutUnlocked
+                    ? "Layout unlocked for editing."
+                    : "Layout saved. Use the password flow to edit it."}
+                </span>
+                <button type="button" className="btn-ghost" onClick={requestLayoutEdit} disabled={layoutUnlocked}>
+                  {layoutUnlocked ? "Already unlocked" : "Edit with Admin Password"}
+                </button>
+              </div>
+            )}
 
-          <div className="layout-preview-scroll">
-            <div className="machine-layout-preview">
-              <div className="width-direction"><span>W</span><strong>Width -&gt;</strong><span>E</span></div>
-              <div className="layout-map-row">
-                <div className="north-south-label north">N</div>
-                <div
-                  className="machine-grid"
-                  style={{ "--layout-size": layoutSize }}
-                  aria-label={`${layoutSize} columns and ${layoutLength} rows, with ${machineCount} machine slots. North is at the top and West is on the left.`}
-                >
-                  {layoutCells.map(({ row, column, machineNumber }) => (
-                    <div className="machine-layout-cell" key={`${row}-${column}`}>
-                      <span>R{row}</span>
-                      <strong>{machineNumber}</strong>
-                      <span>C{column}</span>
-                    </div>
+            <div className="layout-selector" aria-label="Select machine layout size">
+              {layoutOptions.map((row) => (
+                <div className="layout-option-row" key={row[0]}>
+                  {row.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      className={`layout-option ${layoutSize === size ? "active" : ""}`}
+                      onClick={() => {
+                        if (!layoutUnlocked && layoutSaved) return;
+                        setLayoutSize(size);
+                        setLayoutMachineCount(size * size);
+                      }}
+                      aria-pressed={layoutSize === size}
+                      disabled={layoutSaved && !layoutUnlocked}
+                    >
+                      Layout {size}
+                    </button>
                   ))}
                 </div>
-                <div className="north-south-label south">S</div>
-              </div>
-              <div className="length-direction"><span>N</span><strong>Length v</strong><span>S</span></div>
+              ))}
             </div>
-          </div>
 
-          <div className="layout-actions">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={saveLayout}
-              disabled={!canEditLayout || layoutSaving}
-            >
-              {layoutSaving ? "Saving Layout..." : layoutSaved ? "Save Layout Changes" : "Save Layout"}
-            </button>
-            {layoutUnlocked && (
-              <button type="button" className="btn-secondary" onClick={resetLayoutAccess} disabled={layoutSaving}>
-                Cancel Editing
+            <label className="layout-length-input">
+              <span>Machine slots</span>
+              <div className="layout-stepper">
+                <button
+                  type="button"
+                  className="layout-stepper-btn"
+                  onClick={() => {
+                    if (!layoutUnlocked && layoutSaved) return;
+                    setLayoutMachineCount((current) => Math.max(1, Number(current) - 1));
+                  }}
+                  disabled={layoutSaved && !layoutUnlocked}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={machineCount}
+                  onChange={(event) => {
+                    if (!layoutUnlocked && layoutSaved) return;
+                    const value = event.target.value;
+                    setLayoutMachineCount(value === "" ? "" : Math.min(50, Math.max(1, Number(value))));
+                  }}
+                  disabled={layoutSaved && !layoutUnlocked}
+                />
+                <button
+                  type="button"
+                  className="layout-stepper-btn"
+                  onClick={() => {
+                    if (!layoutUnlocked && layoutSaved) return;
+                    setLayoutMachineCount((current) => Math.min(50, Number(current) + 1));
+                  }}
+                  disabled={layoutSaved && !layoutUnlocked}
+                >
+                  +
+                </button>
+              </div>
+              <small>Add one machine at a time. Width stays at {layoutSize} columns.</small>
+            </label>
+
+            <div className="orientation-key" aria-label="Layout orientation">
+              <span><strong>N</strong> North (top)</span>
+              <span><strong>E</strong> East (right)</span>
+              <span><strong>S</strong> South (bottom)</span>
+              <span><strong>W</strong> West (left)</span>
+            </div>
+
+            <div className="layout-preview-scroll">
+              <div className="machine-layout-preview">
+                <div className="width-direction"><span>W</span><strong>Width -&gt;</strong><span>E</span></div>
+                <div className="layout-map-row">
+                  <div className="north-south-label north">N</div>
+                  <div
+                    className="machine-grid"
+                    style={{ "--layout-size": layoutSize }}
+                    aria-label={`${layoutSize} columns and ${layoutLength} rows, with ${machineCount} machine slots.`}
+                  >
+                    {layoutCells.map(({ row, column, machineNumber }) => (
+                      <div className="machine-layout-cell" key={`${row}-${column}`}>
+                        <span>R{row}</span>
+                        <strong>{machineNumber}</strong>
+                        <span>C{column}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="north-south-label south">S</div>
+                </div>
+                <div className="length-direction"><span>N</span><strong>Length v</strong><span>S</span></div>
+              </div>
+            </div>
+
+            <div className="layout-actions">
+              <button type="button" className="btn-primary" onClick={saveLayout} disabled={layoutSaving}>
+                {layoutSaving ? "Saving Layout..." : layoutSaved ? "Save Layout Changes" : "Save Layout"}
               </button>
-            )}
-          </div>
-        </section>
+              {layoutUnlocked && (
+                <button type="button" className="btn-secondary" onClick={resetLayoutAccess} disabled={layoutSaving}>
+                  Cancel Editing
+                </button>
+              )}
+            </div>
+          </section>
+        )}
       </div>
 
       {showPasswordPrompt && (
