@@ -18,7 +18,7 @@ const getLayoutMachineNumber = (row, column, width) => {
 };
 
 export default function MachineList() {
-  const { isAdmin, isOwner } = useAuth();
+  const { isAdmin } = useAuth();
   const canOpenMachine = true;
   const [machines, setMachines] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -68,7 +68,7 @@ export default function MachineList() {
   const loadMachines = () => {
     setLoading(true);
     machineApi
-      .list({ search, status, company, section })
+      .list({ search, status, company, section, category: "loom" })
       .then((res) => setMachines(res.data.data))
       .finally(() => setLoading(false));
   };
@@ -145,11 +145,6 @@ export default function MachineList() {
             {card}
           </div>
         )}
-        {canEditMachine && (
-          <Link className="btn-secondary machine-edit-link" to={`/machines/${machine._id}/edit`}>
-            Edit machine
-          </Link>
-        )}
         {isAdmin && (
           <button
             type="button"
@@ -167,7 +162,7 @@ export default function MachineList() {
   return (
     <div>
       <div className="page-header">
-        <h1>{isAdmin || isOwner ? "Machines" : "My Assigned Machines"}</h1>
+        <h1>Machine Layout</h1>
         {isAdmin && company && (
           <Link to={`/machines/new?company=${encodeURIComponent(company)}`} className="btn-primary">+ Add Machine</Link>
         )}
