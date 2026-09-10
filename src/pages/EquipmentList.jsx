@@ -81,7 +81,7 @@ export default function EquipmentList({ assetType }) {
               {equipment.map((item) => (
                 <div className="equipment-card" key={item._id}>
                   {canOpenEquipment ? (
-                    <Link to={`/machines/${item._id}`} className="equipment-card-link">
+                    <Link to={`${basePath}/${item._id}`} className="equipment-card-link">
                       <div className="machine-card-header">
                         <h3>{item.machineName}</h3>
                         <span className={`status-badge ${item.status === "Running" ? "green" : item.status === "Breakdown" ? "red" : "orange"}`}>{item.status}</span>

@@ -41,6 +41,22 @@ export default function App() {
             <Route path="/compressors" element={<EquipmentList assetType="Compressor" />} />
             <Route path="/air-dryers" element={<EquipmentList assetType="Air Dryer" />} />
             <Route
+              path="/compressors/:id"
+              element={
+                <ProtectedRoute allowedRoles={["employee"]}>
+                  <MachineDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/air-dryers/:id"
+              element={
+                <ProtectedRoute allowedRoles={["employee"]}>
+                  <MachineDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/machines/:id"
               element={
                 <ProtectedRoute allowedRoles={["employee"]}>
