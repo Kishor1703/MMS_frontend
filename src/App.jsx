@@ -89,30 +89,6 @@ export default function App() {
               }
             />
             <Route
-              path="/machines/:id/edit"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "owner"]}>
-                  <AddMachine />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/compressors/new"
-              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Compressor" /></ProtectedRoute>}
-            />
-            <Route
-              path="/compressors/:id/edit"
-              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Compressor" /></ProtectedRoute>}
-            />
-            <Route
-              path="/air-dryers/new"
-              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Air Dryer" /></ProtectedRoute>}
-            />
-            <Route
-              path="/air-dryers/:id/edit"
-              element={<ProtectedRoute allowedRoles={["admin"]}><AddEquipment assetType="Air Dryer" /></ProtectedRoute>}
-            />
-            <Route
               path="/owners"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>

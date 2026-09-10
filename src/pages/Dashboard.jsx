@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { dashboardApi, notificationApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../api/client";
-import { MACHINE_TYPE_OPTIONS, STATUS_META } from "../constants/machineCategories";
+import { MACHINE_CATEGORIES, MACHINE_TYPE_OPTIONS, STATUS_META } from "../constants/machineCategories";
 
 const profilePhotoUrl = (photo) => (photo ? new URL(photo, apiClient.defaults.baseURL).href : "");
 
@@ -210,7 +210,7 @@ export default function Dashboard() {
 
   const kpis = isAdmin
     ? [
-        { label: "Total Machines", value: view.totalMachines, sub: category ? "selected type" : "all types", icon: "🏭", tone: "default" },
+        { label: "Total Equipment", value: view.totalMachines, sub: category ? "selected type" : "all types", icon: "🏭", tone: "default" },
         { label: "Running", value: view.runningMachines, sub: `${view.efficiency ?? 0}% efficiency`, icon: "▶", tone: "green" },
         { label: "Stopped", value: view.stoppedMachines, sub: `${share(view.stoppedMachines)}% of total`, icon: "⏸", tone: "blue" },
         { label: "Breakdown", value: view.breakdownMachines, sub: `${share(view.breakdownMachines)}% of total`, icon: "⚠", tone: "red" },
@@ -219,7 +219,7 @@ export default function Dashboard() {
       ]
     : isOwner
       ? [
-          { label: "Total Machines", value: view.totalMachines, sub: category ? "selected type" : "all types", icon: "🏭", tone: "default" },
+          { label: "Total Equipment", value: view.totalMachines, sub: category ? "selected type" : "all types", icon: "🏭", tone: "default" },
           { label: "Running", value: view.runningMachines, sub: `${view.efficiency ?? 0}% efficiency`, icon: "▶", tone: "green" },
           { label: "Stopped", value: view.stoppedMachines, sub: `${share(view.stoppedMachines)}% of total`, icon: "⏸", tone: "blue" },
           { label: "Breakdown", value: view.breakdownMachines, sub: `${share(view.breakdownMachines)}% of total`, icon: "⚠", tone: "red" },
@@ -228,7 +228,7 @@ export default function Dashboard() {
         ]
       : isGeneralManager
         ? [
-            { label: "Total Machines", value: view.totalMachines, sub: category ? "selected type" : "all types", icon: "🏭", tone: "default" },
+            { label: "Total Equipment", value: view.totalMachines, sub: category ? "selected type" : "all types", icon: "🏭", tone: "default" },
             { label: "Running", value: view.runningMachines, sub: `${view.efficiency ?? 0}% efficiency`, icon: "▶", tone: "green" },
             { label: "Stopped", value: view.stoppedMachines, sub: `${share(view.stoppedMachines)}% of total`, icon: "⏸", tone: "blue" },
             { label: "Breakdown", value: view.breakdownMachines, sub: `${share(view.breakdownMachines)}% of total`, icon: "⚠", tone: "red" },
@@ -294,10 +294,11 @@ export default function Dashboard() {
 
           <div className="category-card-grid">
             {MACHINE_TYPE_OPTIONS.map((c) => {
+              const meta = MACHINE_CATEGORIES[c.value];
               const row = categoryStats.find((s) => s.category === c.value) || {};
               return (
-                <Link className="category-card" to={`/${c.route}`} key={c.value}>
-                  <span className="category-card-name">{c.label}</span>
+                <Link className="category-card" to={`/${meta?.layoutRoute || c.route}`} key={c.value}>
+                  <span className="category-card-name">{meta?.icon ? `${meta.icon} ${c.label}` : c.label}</span>
                   <span className="category-card-total">{row.total ?? 0}</span>
                   <span className="category-card-sub">
                     {row.running ?? 0} running · {row.breakdown ?? 0} breakdown

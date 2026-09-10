@@ -66,6 +66,7 @@ export default function AddMachine() {
   const backRoute = lockedMeta?.route || "/machines";
   const [form, setForm] = useState({ ...empty, machineCategory: searchParams.get("category") || "loom" });
   const activeType = MACHINE_CATEGORIES[form.machineCategory]?.single || "Machine";
+  const activeTypeMeta = MACHINE_CATEGORIES[form.machineCategory] || MACHINE_CATEGORIES.loom;
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [usedMachineNumbers, setUsedMachineNumbers] = useState([]);
@@ -77,8 +78,12 @@ export default function AddMachine() {
   const [layoutPasswordError, setLayoutPasswordError] = useState("");
   const [layoutSaving, setLayoutSaving] = useState(false);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [savedMachine, setSavedMachine] = useState(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [companies, setCompanies] = useState([]);
 
-  const company = isEditMode ? form.company : companyParam;
+  const [selectedCompany, setSelectedCompany] = useState(companyParam);
+  const company = isEditMode ? form.company : selectedCompany;
   const machineCount = Math.max(1, Number(layoutMachineCount) || 1);
   const layoutLength = Math.max(1, Math.ceil(machineCount / layoutSize));
   const layoutCells = Array.from({ length: machineCount }, (_, index) => {
@@ -134,12 +139,23 @@ export default function AddMachine() {
   }, [id, isEditMode]);
 
   useEffect(() => {
-    if (isEditMode || !companyParam) return undefined;
+    if (isEditMode || companyParam) return undefined;
+
+    machineApi
+      .companies()
+      .then((response) => setCompanies(response.data.data || []))
+      .catch(() => setError("Failed to load companies"));
+
+    return undefined;
+  }, [companyParam, isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode || !company) return undefined;
 
     let active = true;
     Promise.all([
-      machineApi.companyLayout(companyParam).catch(() => ({ data: { data: null } })),
-      machineApi.list({ company: companyParam, limit: 1000 }).catch(() => ({ data: { data: [] } })),
+      machineApi.companyLayout(company).catch(() => ({ data: { data: null } })),
+      machineApi.list({ company, limit: 1000 }).catch(() => ({ data: { data: [] } })),
     ])
       .then(([layoutRes, machinesRes]) => {
         if (!active) return;
@@ -160,7 +176,7 @@ export default function AddMachine() {
     return () => {
       active = false;
     };
-  }, [companyParam, isEditMode]);
+  }, [company, isEditMode]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -171,6 +187,7 @@ export default function AddMachine() {
       const payload = {
         ...form,
         company,
+        machineNumber: form.machineNumber || (isLockedCategory ? form.machineId : ""),
       };
       if (isEditMode) {
         await machineApi.update(id, payload);
@@ -178,13 +195,14 @@ export default function AddMachine() {
         return;
       }
 
-      await machineApi.create({
+      const created = await machineApi.create({
         ...payload,
         layoutWidth: layoutSize,
         layoutLength,
         machineCount,
       });
-      navigate("/machines");
+      setSavedMachine(created.data?.data || null);
+      setIsSaved(true);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save machine");
     } finally {
@@ -266,20 +284,32 @@ export default function AddMachine() {
           )}
 
           <label>{activeType} ID</label>
-          <input value={form.machineId} onChange={handleChange("machineId")} required />
+          <input
+            value={form.machineId}
+            onChange={handleChange("machineId")}
+            placeholder={`e.g. ${activeTypeMeta.idExample}`}
+            required
+          />
+          <p className="muted id-prefix-hint">
+            {activeType} IDs are independent per equipment type. Use the {activeType} prefix "{activeTypeMeta.idPrefix}-###" (example: {activeTypeMeta.idExample}).
+          </p>
 
           <label>{activeType} Name</label>
           <input value={form.machineName} onChange={handleChange("machineName")} required />
 
-          <label>{activeType} Number</label>
-          <select value={form.machineNumber} onChange={handleChange("machineNumber")} required>
-            <option value="">Select {activeType} number</option>
-            {availableMachineNumbers.map((machineNumber) => (
-              <option key={machineNumber} value={machineNumber}>
-                {activeType} {machineNumber}
-              </option>
-            ))}
-          </select>
+          {!isLockedCategory && (
+            <>
+              <label>{activeType} Number</label>
+              <select value={form.machineNumber} onChange={handleChange("machineNumber")} required>
+                <option value="">Select {activeType} number</option>
+                {availableMachineNumbers.map((machineNumber) => (
+                  <option key={machineNumber} value={machineNumber}>
+                    {activeType} {machineNumber}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
 
           {form.machineCategory === "loom" && (
             <>
@@ -289,7 +319,22 @@ export default function AddMachine() {
           )}
 
           <label>Company</label>
-          <input value={company} readOnly required placeholder="Select a company first" />
+          {companyParam || isEditMode ? (
+            <input value={company} readOnly required placeholder="Select a company first" />
+          ) : (
+            <select
+              value={selectedCompany}
+              onChange={(event) => setSelectedCompany(event.target.value)}
+              required
+            >
+              <option value="">Select a company</option>
+              {companies.map((companyName) => (
+                <option key={companyName} value={companyName}>
+                  {companyName}
+                </option>
+              ))}
+            </select>
+          )}
 
           <label>Brand</label>
           <input value={form.brand} onChange={handleChange("brand")} />
@@ -382,9 +427,14 @@ export default function AddMachine() {
             {isLockedCategory ? `Back to ${lockedMeta.label}` : "Back to Companies"}
           </Link>
 
+          {isSaved && savedMachine && (
+            <button type="button" className="btn-secondary" onClick={startAnotherMachine}>
+              Create Another {sectionName}
+            </button>
+          )}
         </form>
 
-        {!isEditMode && (
+        {!isEditMode && !isLockedCategory && (
           <section className="machine-layout-card" aria-labelledby="machine-layout-title">
             <div className="machine-layout-heading">
               <div>

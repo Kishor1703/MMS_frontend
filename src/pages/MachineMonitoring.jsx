@@ -30,7 +30,7 @@ const machineLink = (m) => (
 
 const COLUMNS = {
   loom: [
-    { label: "Loom", render: machineLink },
+    { label: "Machine", render: machineLink },
     { label: "Section", render: (m) => m.section || "—" },
     { label: "Shed", render: (m) => m.shed || "—" },
     { label: "Brand", render: (m) => m.brand || "—" },

@@ -1,11 +1,10 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const categoryLinks = [
-  { to: "/machines", label: "All Machines", end: false },
-  { to: "/looms", label: "Looms" },
-  { to: "/compressors", label: "Compressors" },
-  { to: "/air-dryers", label: "Air Dryers" },
+const equipmentLinks = [
+  { to: "/machines", label: "🏭 Machines", end: false },
+  { to: "/compressors", label: "⚙ Compressors" },
+  { to: "/air-dryers", label: "💨 Air Dryers" },
 ];
 
 const adminAccountLinks = [
@@ -53,8 +52,8 @@ export default function Sidebar() {
           Dashboard
         </NavLink>
 
-        <div className="sidebar-group-label">Machine Monitoring</div>
-        {categoryLinks.map((link) => (
+        <div className="sidebar-group-label">Equipment</div>
+        {equipmentLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
