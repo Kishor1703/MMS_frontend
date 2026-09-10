@@ -110,27 +110,6 @@ export default function MachineList() {
         <p>{machine.machineNumber}</p>
         <p className="muted">{machine.machineType}</p>
         {machine.section && <p className="muted">Section: {machine.section}</p>}
-        {isAdmin && (
-          <div className="machine-card-actions" onClick={(e) => e.preventDefault()}>
-            <Link
-              to={`/machines/${machine._id}/edit`}
-              className="btn-secondary-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Edit
-            </Link>
-            <button
-              type="button"
-              className="btn-danger-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteMachine(machine);
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        )}
       </>
     );
 
@@ -145,7 +124,7 @@ export default function MachineList() {
             {card}
           </div>
         )}
-        {canEditMachine && (
+        {isAdmin && (
           <Link className="btn-secondary machine-edit-link" to={`/machines/${machine._id}/edit`}>
             Edit machine
           </Link>

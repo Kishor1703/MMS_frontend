@@ -240,16 +240,6 @@ export default function AddMachine() {
     }
   };
 
-  const startAnotherMachine = () => {
-    setForm({ ...empty, machineCategory: categoryParam || "loom" });
-    setSavedMachine(null);
-    setLayoutSaved(false);
-    setLayoutSize(DEFAULT_LAYOUT_SIZE);
-    setLayoutMachineCount(DEFAULT_LAYOUT_MACHINE_COUNT);
-    resetLayoutAccess();
-    setError("");
-  };
-
   return (
     <div>
       <h1>{isLockedCategory ? `Add ${sectionName}` : "Add Machine"}</h1>
@@ -384,19 +374,14 @@ export default function AddMachine() {
           <label>Notes</label>
           <textarea rows={3} value={form.notes} onChange={handleChange("notes")} />
 
-          <button type="submit" disabled={saving || isSaved}>
-            {saving ? "Saving..." : isSaved ? `${sectionName} Saved` : `Save ${sectionName}`}
+          <button type="submit" disabled={saving}>
+            {saving ? "Saving..." : `Save ${sectionName}`}
           </button>
 
           <Link to={`${backRoute}${company ? `?company=${encodeURIComponent(company)}` : ""}`} className="btn-secondary">
             {isLockedCategory ? `Back to ${lockedMeta.label}` : "Back to Companies"}
           </Link>
 
-          {isSaved && (
-            <button type="button" className="btn-secondary" onClick={startAnotherMachine}>
-              Create Another {sectionName}
-            </button>
-          )}
         </form>
 
         {!isEditMode && (

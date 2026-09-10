@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import MachineList from "./pages/MachineList";
 import MachineDetail from "./pages/MachineDetail";
 import AddMachine from "./pages/AddMachine";
+import AddEquipment from "./pages/AddEquipment";
 import EditMachine from "./pages/EditMachine";
 import Employees from "./pages/Employees";
 import AccountManagement from "./pages/AccountManagement";

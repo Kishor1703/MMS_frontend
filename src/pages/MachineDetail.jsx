@@ -489,7 +489,7 @@ export default function MachineDetail() {
               <option>Idle</option>
             </select>
           )}
-          {canManageMachine && (
+          {isAdmin && (
             <>
               <Link className="btn-secondary" to={`/machines/${id}/edit`}>
                 Edit Machine
